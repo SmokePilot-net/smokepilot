@@ -1,5 +1,7 @@
 import os
+import sys
 import subprocess
+import threading
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -101,3 +103,28 @@ def apply_update():
         return False, result.stderr.strip()
     except Exception as e:
         return False, str(e)
+
+
+def restart_service():
+    """Restart the smokeping-manager service after a short delay.
+
+    Tries systemd first, falls back to re-executing the process.
+    The delay gives the HTTP response time to reach the browser.
+    """
+    def _restart():
+        import time
+        time.sleep(2)
+
+        # Try systemd restart
+        result = subprocess.run(
+            ["systemctl", "restart", "smokeping-manager"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            return
+
+        # Fallback: re-exec ourselves
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    t = threading.Thread(target=_restart, daemon=True)
+    t.start()

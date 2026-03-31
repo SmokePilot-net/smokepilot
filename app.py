@@ -6,7 +6,7 @@ from database import (
     get_host, create_host, update_host, delete_host
 )
 from generator import generate_config, write_config, reload_smokeping
-from updater import get_current_version, check_for_updates, apply_update
+from updater import get_current_version, check_for_updates, apply_update, restart_service
 from config import SECRET_KEY, ADMIN_USER, ADMIN_PASSWORD, SMOKEPING_CGI_URL
 
 app = Flask(__name__)
@@ -233,7 +233,8 @@ def update_page():
 def do_update():
     success, message = apply_update()
     if success:
-        flash(f"Updated successfully. Restart the service to apply. {message}", "success")
+        flash(f"Updated successfully. Restarting in a few seconds... {message}", "success")
+        restart_service()
     else:
         flash(f"Update failed: {message}", "error")
     return redirect(url_for("update_page"))
