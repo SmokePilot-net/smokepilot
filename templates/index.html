@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Deploy bar -->
+<div class="deploy-bar">
+    <div>
+        <strong>Deploy changes to SmokePing</strong>
+        <span style="color: #888; font-size: 13px; margin-left: 8px;">Write config and optionally reload</span>
+    </div>
+    <div class="actions">
+        <a href="{{ url_for('preview_config') }}" class="btn btn-primary btn-sm">Preview</a>
+        <form method="post" action="{{ url_for('deploy_config') }}" style="display:inline">
+            <button type="submit" class="btn btn-primary btn-sm">Write Config</button>
+        </form>
+        <form method="post" action="{{ url_for('deploy_config') }}" style="display:inline">
+            <input type="hidden" name="reload" value="1">
+            <button type="submit" class="btn btn-success btn-sm">Write + Reload</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left: Tree view -->
+    <div class="col" style="flex: 2;">
+        <div class="card">
+            <h2>Targets</h2>
+            {% if tree %}
+            <ul class="tree">
+                {% for node in tree %}
+                    {{ render_group(node) }}
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color: #888; font-size: 14px;">No groups yet. Create one to get started.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right: Add forms -->
+    <div class="col">
+        <!-- Add Group -->
+        <div class="card">
+            <h2>Add Group</h2>
+            <form method="post" action="{{ url_for('add_group') }}">
+                <div class="field">
+                    <label for="group_name">Name (no spaces)</label>
+                    <input type="text" name="name" id="group_name" placeholder="e.g. Clients" required pattern="[A-Za-z][A-Za-z0-9_]*">
+                </div>
+                <div class="field">
+                    <label for="group_title">Display Title</label>
+                    <input type="text" name="title" id="group_title" placeholder="e.g. Client Servers">
+                </div>
+                <div class="field">
+                    <label for="group_parent">Parent Group (optional)</label>
+                    <select name="parent_id" id="group_parent">
+                        <option value="">-- Top level --</option>
+                        {% for g in groups %}
+                        <option value="{{ g.id }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Group</button>
+            </form>
+        </div>
+
+        <!-- Add Host -->
+        <div class="card">
+            <h2>Add Host</h2>
+            <form method="post" action="{{ url_for('add_host') }}">
+                <div class="field">
+                    <label for="host_name">Name (no spaces)</label>
+                    <input type="text" name="name" id="host_name" placeholder="e.g. web01" required pattern="[A-Za-z][A-Za-z0-9_]*">
+                </div>
+                <div class="field">
+                    <label for="host_title">Display Title</label>
+                    <input type="text" name="title" id="host_title" placeholder="e.g. Web Server 01">
+                </div>
+                <div class="field">
+                    <label for="host_addr">Host (IP or hostname)</label>
+                    <input type="text" name="host" id="host_addr" placeholder="e.g. 10.0.1.1 or web01.example.com" required>
+                </div>
+                <div class="field">
+                    <label for="host_group">Group</label>
+                    <select name="group_id" id="host_group" required>
+                        <option value="">-- Select group --</option>
+                        {% for g in groups %}
+                        <option value="{{ g.id }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="host_probe">Probe</label>
+                    <select name="probe" id="host_probe">
+                        <option value="FPing" selected>FPing (ICMP)</option>
+                        <option value="DNS">DNS</option>
+                        <option value="TCPPing">TCPPing</option>
+                        <option value="Curl">Curl (HTTP)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Host</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Group Modal -->
+<div id="editGroupModal" class="modal-overlay">
+    <div class="modal">
+        <h3>Edit Group</h3>
+        <form id="editGroupForm" method="post">
+            <div class="field">
+                <label>Name</label>
+                <input type="text" name="name" id="edit_group_name" required pattern="[A-Za-z][A-Za-z0-9_]*">
+            </div>
+            <div class="field">
+                <label>Display Title</label>
+                <input type="text" name="title" id="edit_group_title">
+            </div>
+            <div class="field">
+                <label>Parent Group</label>
+                <select name="parent_id" id="edit_group_parent">
+                    <option value="">-- Top level --</option>
+                    {% for g in groups %}
+                    <option value="{{ g.id }}">{{ g.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn" onclick="closeModal('editGroupModal')">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Host Modal -->
+<div id="editHostModal" class="modal-overlay">
+    <div class="modal">
+        <h3>Edit Host</h3>
+        <form id="editHostForm" method="post">
+            <div class="field">
+                <label>Name</label>
+                <input type="text" name="name" id="edit_host_name" required pattern="[A-Za-z][A-Za-z0-9_]*">
+            </div>
+            <div class="field">
+                <label>Display Title</label>
+                <input type="text" name="title" id="edit_host_title">
+            </div>
+            <div class="field">
+                <label>Host (IP or hostname)</label>
+                <input type="text" name="host" id="edit_host_addr" required>
+            </div>
+            <div class="field">
+                <label>Group</label>
+                <select name="group_id" id="edit_host_group" required>
+                    {% for g in groups %}
+                    <option value="{{ g.id }}">{{ g.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label>Probe</label>
+                <select name="probe" id="edit_host_probe">
+                    <option value="FPing">FPing (ICMP)</option>
+                    <option value="DNS">DNS</option>
+                    <option value="TCPPing">TCPPing</option>
+                    <option value="Curl">Curl (HTTP)</option>
+                </select>
+            </div>
+            <div class="field">
+                <label><input type="checkbox" name="enabled" id="edit_host_enabled" value="1" checked> Enabled</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn" onclick="closeModal('editHostModal')">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditGroup(id, name, title, parentId) {
+    document.getElementById('editGroupForm').action = '/group/' + id + '/edit';
+    document.getElementById('edit_group_name').value = name;
+    document.getElementById('edit_group_title').value = title;
+    document.getElementById('edit_group_parent').value = parentId || '';
+    document.getElementById('editGroupModal').classList.add('active');
+}
+
+function openEditHost(id, name, title, host, groupId, probe, enabled) {
+    document.getElementById('editHostForm').action = '/host/' + id + '/edit';
+    document.getElementById('edit_host_name').value = name;
+    document.getElementById('edit_host_title').value = title;
+    document.getElementById('edit_host_addr').value = host;
+    document.getElementById('edit_host_group').value = groupId;
+    document.getElementById('edit_host_probe').value = probe;
+    document.getElementById('edit_host_enabled').checked = !!enabled;
+    document.getElementById('editHostModal').classList.add('active');
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+        if (e.target === el) el.classList.remove('active');
+    });
+});
+</script>
+
+<!-- Jinja macro for recursive tree rendering -->
+{% macro render_group(node) %}
+<li>
+    <div class="tree-group">
+        <span>{{ node.name }} <span style="font-weight:normal; color:#888; font-size:12px;">{{ node.title }}</span></span>
+        <div class="tree-actions">
+            <button class="btn btn-primary btn-sm" onclick="openEditGroup({{ node.id }}, '{{ node.name }}', '{{ node.title }}', '{{ node.children[0].id if node.children else '' }}')">Edit</button>
+            <form method="post" action="{{ url_for('remove_group', group_id=node.id) }}" onsubmit="return confirm('Delete group {{ node.name }} and all its contents?')">
+                <button class="btn btn-danger btn-sm">Del</button>
+            </form>
+        </div>
+    </div>
+    {% if node.hosts %}
+    <ul>
+        {% for h in node.hosts %}
+        <li>
+            <div class="tree-host">
+                <span>{{ h.name }} <span class="host-addr">{{ h.host }}</span></span>
+                <div class="tree-actions">
+                    <button class="btn btn-primary btn-sm" onclick="openEditHost({{ h.id }}, '{{ h.name }}', '{{ h.title }}', '{{ h.host }}', {{ h.group_id }}, '{{ h.probe }}', {{ h.enabled }})">Edit</button>
+                    <form method="post" action="{{ url_for('remove_host', host_id=h.id) }}" onsubmit="return confirm('Delete host {{ h.name }}?')">
+                        <button class="btn btn-danger btn-sm">Del</button>
+                    </form>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if node.children %}
+    <ul>
+        {% for child in node.children %}
+            {{ render_group(child) }}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</li>
+{% endmacro %}
+
+{% endblock %}

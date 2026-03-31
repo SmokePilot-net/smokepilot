@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Login - SmokePing Manager{% endblock %}
+{% block content %}
+<div style="max-width: 360px; margin: 80px auto;">
+    <div class="card">
+        <h2>Login</h2>
+        <form method="post">
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" name="username" id="username" required autofocus>
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 8px;">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
