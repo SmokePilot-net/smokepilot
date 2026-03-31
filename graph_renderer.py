@@ -1,5 +1,6 @@
 import os
 import subprocess
+import time
 
 # SmokePing's default data directory
 DATA_DIR = os.environ.get("SPM_DATA_DIR", "/var/lib/smokeping")
@@ -179,14 +180,20 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
     cmd.append("GPRINT:median:MAX:  max\\: %6.2lf %ss")
     cmd.append("GPRINT:median:MIN:  min\\: %6.2lf %ss\\n")
     cmd.append("GPRINT:loss:LAST:  packet loss\\: %5.1lf %%\\n")
-    cmd.append("COMMENT:  probe\\: 20 ICMP pings every 300s\\n")
 
-    # Loss color legend
-    cmd.append("COMMENT: \\n")
-    cmd.append("COMMENT:  loss\\:")
-    cmd.append(f"AREA:ping1#{sb}5c:  0/{_get_pings(rrd_path)}")
-    cmd.append("LINE1:loss1#0000ff:  1+")
-    cmd.append("COMMENT:  ")
+    # Loss color legend (matching SmokePing's style)
+    pings = _get_pings(rrd_path)
+    cmd.append("COMMENT:  loss color\\:")
+    cmd.append(f"AREA:ping1#{sb}80:  0/{pings}")
+    cmd.append(f"LINE1:loss1#0000ff:  1/{pings}")
+    cmd.append(f"LINE1:loss2#ff00ff:  4/{pings}")
+    cmd.append(f"LINE1:loss3#ff0000:  10/{pings}")
+    cmd.append(f"LINE1:loss4#ff0000:  19/{pings}\\n")
+
+    # Probe info + end timestamp
+    end_time = time.strftime("%a %b %d %H\\:%M\\:%S %Y")
+    cmd.append("COMMENT:  probe\\: 20 ICMP pings every 300s")
+    cmd.append(f"COMMENT:                          end\\: {end_time}\\n")
 
     try:
         result = subprocess.run(
