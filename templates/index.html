@@ -1,6 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% macro render_group(node) %}
+<li>
+    <div class="tree-group">
+        <span>{{ node.name }} <span style="font-weight:normal; color:#888; font-size:12px;">{{ node.title }}</span></span>
+        <div class="tree-actions">
+            <button class="btn btn-primary btn-sm" onclick="openEditGroup({{ node.id }}, '{{ node.name }}', '{{ node.title }}', '{{ node.children[0].id if node.children else '' }}')">Edit</button>
+            <form method="post" action="{{ url_for('remove_group', group_id=node.id) }}" onsubmit="return confirm('Delete group {{ node.name }} and all its contents?')">
+                <button class="btn btn-danger btn-sm">Del</button>
+            </form>
+        </div>
+    </div>
+    {% if node.hosts %}
+    <ul>
+        {% for h in node.hosts %}
+        <li>
+            <div class="tree-host">
+                <span>{{ h.name }} <span class="host-addr">{{ h.host }}</span></span>
+                <div class="tree-actions">
+                    <button class="btn btn-primary btn-sm" onclick="openEditHost({{ h.id }}, '{{ h.name }}', '{{ h.title }}', '{{ h.host }}', {{ h.group_id }}, '{{ h.probe }}', {{ h.enabled }})">Edit</button>
+                    <form method="post" action="{{ url_for('remove_host', host_id=h.id) }}" onsubmit="return confirm('Delete host {{ h.name }}?')">
+                        <button class="btn btn-danger btn-sm">Del</button>
+                    </form>
+                </div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if node.children %}
+    <ul>
+        {% for child in node.children %}
+            {{ render_group(child) }}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</li>
+{% endmacro %}
+
 <!-- Deploy bar -->
 <div class="deploy-bar">
     <div>
@@ -205,44 +243,5 @@ document.querySelectorAll('.modal-overlay').forEach(function(el) {
     });
 });
 </script>
-
-<!-- Jinja macro for recursive tree rendering -->
-{% macro render_group(node) %}
-<li>
-    <div class="tree-group">
-        <span>{{ node.name }} <span style="font-weight:normal; color:#888; font-size:12px;">{{ node.title }}</span></span>
-        <div class="tree-actions">
-            <button class="btn btn-primary btn-sm" onclick="openEditGroup({{ node.id }}, '{{ node.name }}', '{{ node.title }}', '{{ node.children[0].id if node.children else '' }}')">Edit</button>
-            <form method="post" action="{{ url_for('remove_group', group_id=node.id) }}" onsubmit="return confirm('Delete group {{ node.name }} and all its contents?')">
-                <button class="btn btn-danger btn-sm">Del</button>
-            </form>
-        </div>
-    </div>
-    {% if node.hosts %}
-    <ul>
-        {% for h in node.hosts %}
-        <li>
-            <div class="tree-host">
-                <span>{{ h.name }} <span class="host-addr">{{ h.host }}</span></span>
-                <div class="tree-actions">
-                    <button class="btn btn-primary btn-sm" onclick="openEditHost({{ h.id }}, '{{ h.name }}', '{{ h.title }}', '{{ h.host }}', {{ h.group_id }}, '{{ h.probe }}', {{ h.enabled }})">Edit</button>
-                    <form method="post" action="{{ url_for('remove_host', host_id=h.id) }}" onsubmit="return confirm('Delete host {{ h.name }}?')">
-                        <button class="btn btn-danger btn-sm">Del</button>
-                    </form>
-                </div>
-            </div>
-        </li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-    {% if node.children %}
-    <ul>
-        {% for child in node.children %}
-            {{ render_group(child) }}
-        {% endfor %}
-    </ul>
-    {% endif %}
-</li>
-{% endmacro %}
 
 {% endblock %}
