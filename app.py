@@ -6,6 +6,7 @@ from database import (
     get_host, create_host, update_host, delete_host
 )
 from generator import generate_config, write_config, reload_smokeping
+from importer import parse_targets_file, import_to_database
 from updater import get_current_version, check_for_updates, apply_update, restart_service
 from graph_renderer import render_graph
 from config import SECRET_KEY, ADMIN_USER, ADMIN_PASSWORD, HOST, PORT, DEBUG
@@ -232,7 +233,25 @@ def settings():
     current = get_current_version()
     has_updates, info = check_for_updates()
     config = generate_config()
-    return render_template("settings.html", current=current, has_updates=has_updates, info=info, config=config)
+    # Preview what would be imported
+    tree, parse_error = parse_targets_file()
+    return render_template("settings.html", current=current, has_updates=has_updates,
+                           info=info, config=config, import_tree=tree, parse_error=parse_error)
+
+
+@app.route("/settings/import", methods=["POST"])
+@login_required
+def import_targets():
+    tree, error = parse_targets_file()
+    if error:
+        flash(f"Import failed: {error}", "error")
+        return redirect(url_for("settings"))
+
+    groups_added, hosts_added, skipped = import_to_database(tree)
+    flash(f"Imported {groups_added} groups and {hosts_added} hosts ({skipped} skipped/duplicates)", "success")
+    if groups_added > 0 or hosts_added > 0:
+        deploy_and_reload()
+    return redirect(url_for("settings"))
 
 
 @app.route("/settings/update", methods=["POST"])

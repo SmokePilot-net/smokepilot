@@ -86,4 +86,47 @@
     </div>
 </div>
 
+<!-- Import existing targets -->
+<div class="card">
+    <h2>Import Existing Targets</h2>
+    <p style="font-size: 13px; color: #888; margin-bottom: 12px;">
+        Import targets from SmokePing's existing <code>Targets</code> config file into the manager database.
+    </p>
+
+    {% if parse_error %}
+        <p style="color: #f5a3a3;">{{ parse_error }}</p>
+    {% elif import_tree %}
+        <p style="margin-bottom: 12px;">Found the following targets to import:</p>
+
+        {% macro render_import_tree(nodes, indent) %}
+        {% for node in nodes %}
+        <div style="margin-left: {{ indent * 20 }}px; padding: 4px 0; font-size: 13px;">
+            {% if node.host %}
+                <span style="color: #6c8ebf; font-family: monospace;">{{ node.name }}</span>
+                <span style="color: #888;"> — {{ node.host }}</span>
+            {% else %}
+                <strong>{{ node.name }}</strong>
+                <span style="color: #888; font-size: 12px;"> ({{ node.title }})</span>
+            {% endif %}
+        </div>
+        {% if node.children %}
+            {{ render_import_tree(node.children, indent + 1) }}
+        {% endif %}
+        {% endfor %}
+        {% endmacro %}
+
+        <div style="background: #1a1a2e; border-radius: 4px; padding: 12px; margin-bottom: 12px; max-height: 300px; overflow-y: auto;">
+            {{ render_import_tree(import_tree, 0) }}
+        </div>
+
+        <form method="post" action="{{ url_for('import_targets') }}">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Import these targets? Duplicates will be skipped.')">
+                Import Targets
+            </button>
+        </form>
+    {% else %}
+        <p style="color: #888;">No targets found in SmokePing config, or config file not accessible.</p>
+    {% endif %}
+</div>
+
 {% endblock %}
