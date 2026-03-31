@@ -134,14 +134,25 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
     sb = colors["smoke_base"]
 
     # Outermost percentiles (lightest) drawn first, then overwritten by inner ones
-    smoke_layers = [
-        ("ping20", "18"), ("ping19", "20"), ("ping18", "28"), ("ping17", "30"),
-        ("ping16", "38"), ("ping15", "40"), ("ping14", "48"), ("ping13", "50"),
-        ("ping12", "58"), ("ping11", "60"),
-        ("ping10", "60"), ("ping9", "58"), ("ping8", "50"), ("ping7", "48"),
-        ("ping6", "40"), ("ping5", "38"), ("ping4", "30"), ("ping3", "28"),
-        ("ping2", "20"), ("ping1", "18"),
-    ]
+    # Higher opacities for dark mode since subtle greens vanish on dark canvas
+    if dark_mode:
+        smoke_layers = [
+            ("ping20", "40"), ("ping19", "48"), ("ping18", "50"), ("ping17", "58"),
+            ("ping16", "60"), ("ping15", "68"), ("ping14", "70"), ("ping13", "78"),
+            ("ping12", "80"), ("ping11", "88"),
+            ("ping10", "88"), ("ping9", "80"), ("ping8", "78"), ("ping7", "70"),
+            ("ping6", "68"), ("ping5", "60"), ("ping4", "58"), ("ping3", "50"),
+            ("ping2", "48"), ("ping1", "40"),
+        ]
+    else:
+        smoke_layers = [
+            ("ping20", "18"), ("ping19", "20"), ("ping18", "28"), ("ping17", "30"),
+            ("ping16", "38"), ("ping15", "40"), ("ping14", "48"), ("ping13", "50"),
+            ("ping12", "58"), ("ping11", "60"),
+            ("ping10", "60"), ("ping9", "58"), ("ping8", "50"), ("ping7", "48"),
+            ("ping6", "40"), ("ping5", "38"), ("ping4", "30"), ("ping3", "28"),
+            ("ping2", "20"), ("ping1", "18"),
+        ]
 
     for ds, opacity in smoke_layers:
         cmd.append(f"AREA:{ds}#{sb}{opacity}:")
