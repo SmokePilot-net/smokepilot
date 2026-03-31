@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Settings - SmokePing Manager{% endblock %}
+{% block content %}
+
+<div class="row">
+    <div class="col">
+        <!-- Version & Updates -->
+        <div class="card">
+            <h2>Version & Updates</h2>
+            {% if current %}
+            <table>
+                <tr><th style="width:120px;">Commit</th><td><code>{{ current.hash }}</code></td></tr>
+                <tr><th>Date</th><td>{{ current.date }}</td></tr>
+                <tr><th>Message</th><td>{{ current.message }}</td></tr>
+            </table>
+            {% else %}
+            <p style="color: #888;">Could not determine current version.</p>
+            {% endif %}
+
+            {% if info.get('error') %}
+                <p style="color: #f5a3a3; margin-top: 12px;">Error checking for updates: {{ info.error }}</p>
+            {% elif has_updates %}
+                <p style="margin-top: 12px; margin-bottom: 12px;">
+                    <strong>{{ info.behind }} update{{ 's' if info.behind != 1 }} available</strong>
+                </p>
+                <table>
+                    <thead>
+                        <tr><th>Commit</th><th>Date</th><th>Message</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for commit in info.pending %}
+                        <tr>
+                            <td><code>{{ commit.hash }}</code></td>
+                            <td>{{ commit.date }}</td>
+                            <td>{{ commit.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <form method="post" action="{{ url_for('do_update') }}" style="margin-top: 16px;">
+                    <button type="submit" class="btn btn-success" onclick="return confirmUpdate()">
+                        Apply Update + Restart
+                    </button>
+                </form>
+                <div id="restartNotice" style="display:none; margin-top: 16px; padding: 12px; background: #1b4332; border: 1px solid #2d6a4f; border-radius: 4px; color: #95d5b2;">
+                    Update applied. Service is restarting... This page will reload automatically.
+                </div>
+                <script>
+                function confirmUpdate() {
+                    if (!confirm('Apply update and restart the service?')) return false;
+                    setTimeout(function() {
+                        document.getElementById('restartNotice').style.display = 'block';
+                        setTimeout(function pollReady() {
+                            fetch('{{ url_for("settings") }}')
+                                .then(function() { window.location.reload(); })
+                                .catch(function() { setTimeout(pollReady, 1000); });
+                        }, 3000);
+                    }, 100);
+                    return true;
+                }
+                </script>
+            {% else %}
+                <p style="color: #95d5b2; margin-top: 12px;">You are up to date.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col">
+        <!-- Generated Config Preview -->
+        <div class="card">
+            <h2>Generated SmokePing Config</h2>
+            <p style="font-size: 13px; color: #888; margin-bottom: 12px;">
+                Current <code>@include managed-targets</code> content.
+            </p>
+            <pre>{{ config }}</pre>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <form method="post" action="{{ url_for('deploy_config') }}">
+                    <button type="submit" class="btn btn-primary btn-sm">Write Config</button>
+                </form>
+                <form method="post" action="{{ url_for('deploy_config') }}">
+                    <input type="hidden" name="reload" value="1">
+                    <button type="submit" class="btn btn-success btn-sm">Write + Reload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

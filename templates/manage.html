@@ -40,24 +40,6 @@
 </li>
 {% endmacro %}
 
-<!-- Deploy bar -->
-<div class="deploy-bar">
-    <div>
-        <strong>Deploy changes to SmokePing</strong>
-        <span style="color: #888; font-size: 13px; margin-left: 8px;">Write config and optionally reload</span>
-    </div>
-    <div class="actions">
-        <a href="{{ url_for('preview_config') }}" class="btn btn-primary btn-sm">Preview</a>
-        <form method="post" action="{{ url_for('deploy_config') }}" style="display:inline">
-            <button type="submit" class="btn btn-primary btn-sm">Write Config</button>
-        </form>
-        <form method="post" action="{{ url_for('deploy_config') }}" style="display:inline">
-            <input type="hidden" name="reload" value="1">
-            <button type="submit" class="btn btn-success btn-sm">Write + Reload</button>
-        </form>
-    </div>
-</div>
-
 <div class="row">
     <!-- Left: Tree view -->
     <div class="col" style="flex: 2;">

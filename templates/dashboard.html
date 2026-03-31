@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Graphs - SmokePing Manager{% endblock %}
+{% block title %}Dashboard - SmokePing Manager{% endblock %}
 {% block content %}
 
 {% macro render_graph_group(node) %}
@@ -35,7 +35,7 @@
     {% endfor %}
 {% else %}
 <div class="card">
-    <p style="color: #888;">No targets configured yet. <a href="{{ url_for('index') }}" style="color: #3498db;">Add some hosts</a> first.</p>
+    <p style="color: #888;">No targets configured yet. <a href="{{ url_for('manage') }}" style="color: #3498db;">Add some hosts</a> first.</p>
 </div>
 {% endif %}
 

@@ -42,7 +42,7 @@ def login():
     if request.method == "POST":
         if request.form["username"] == ADMIN_USER and request.form["password"] == ADMIN_PASSWORD:
             session["logged_in"] = True
-            return redirect(url_for("index"))
+            return redirect(url_for("dashboard"))
         flash("Invalid credentials", "error")
     return render_template("login.html")
 
@@ -58,170 +58,22 @@ def inject_globals():
     return {"smokeping_cgi_url": url_for("smokeping_cgi_proxy")}
 
 
+# --- Dashboard (graphs) ---
+
 @app.route("/")
 @login_required
-def index():
+def dashboard():
     tree = get_tree()
-    groups = get_groups()
-    return render_template("index.html", tree=tree, groups=groups)
+    return render_template("dashboard.html", tree=tree)
 
 
-# --- Group routes ---
-
-@app.route("/group/add", methods=["POST"])
+@app.route("/host/<path:target_path>")
 @login_required
-def add_group():
-    name = request.form.get("name", "").strip()
-    title = request.form.get("title", "").strip()
-    parent_id = request.form.get("parent_id") or None
-
-    if not name or not VALID_NAME.match(name):
-        flash("Invalid name. Use letters, numbers, underscore. Must start with a letter.", "error")
-        return redirect(url_for("index"))
-
-    if parent_id:
-        parent_id = int(parent_id)
-
-    try:
-        create_group(name, title or name, parent_id)
-        flash(f"Group '{name}' created", "success")
-        deploy_and_reload()
-    except Exception as e:
-        flash(f"Error: {e}", "error")
-    return redirect(url_for("index"))
+def host_detail(target_path):
+    return render_template("host_detail.html", target_path=target_path)
 
 
-@app.route("/group/<int:group_id>/edit", methods=["POST"])
-@login_required
-def edit_group(group_id):
-    name = request.form.get("name", "").strip()
-    title = request.form.get("title", "").strip()
-    parent_id = request.form.get("parent_id") or None
-
-    if not name or not VALID_NAME.match(name):
-        flash("Invalid name.", "error")
-        return redirect(url_for("index"))
-
-    if parent_id:
-        parent_id = int(parent_id)
-        if parent_id == group_id:
-            flash("A group cannot be its own parent.", "error")
-            return redirect(url_for("index"))
-
-    try:
-        update_group(group_id, name, title or name, parent_id)
-        flash(f"Group '{name}' updated", "success")
-        deploy_and_reload()
-    except Exception as e:
-        flash(f"Error: {e}", "error")
-    return redirect(url_for("index"))
-
-
-@app.route("/group/<int:group_id>/delete", methods=["POST"])
-@login_required
-def remove_group(group_id):
-    group = get_group(group_id)
-    if group:
-        delete_group(group_id)
-        flash(f"Group '{group['name']}' deleted (including all hosts and subgroups)", "success")
-        deploy_and_reload()
-    return redirect(url_for("index"))
-
-
-# --- Host routes ---
-
-@app.route("/host/add", methods=["POST"])
-@login_required
-def add_host():
-    name = request.form.get("name", "").strip()
-    title = request.form.get("title", "").strip()
-    host = request.form.get("host", "").strip()
-    group_id = request.form.get("group_id")
-    probe = request.form.get("probe", "FPing").strip()
-
-    if not name or not VALID_NAME.match(name):
-        flash("Invalid name. Use letters, numbers, underscore. Must start with a letter.", "error")
-        return redirect(url_for("index"))
-
-    if not host:
-        flash("Host (IP or hostname) is required.", "error")
-        return redirect(url_for("index"))
-
-    if not group_id:
-        flash("Please select a group.", "error")
-        return redirect(url_for("index"))
-
-    try:
-        create_host(name, host, int(group_id), title or name, probe)
-        flash(f"Host '{name}' ({host}) added", "success")
-        deploy_and_reload()
-    except Exception as e:
-        flash(f"Error: {e}", "error")
-    return redirect(url_for("index"))
-
-
-@app.route("/host/<int:host_id>/edit", methods=["POST"])
-@login_required
-def edit_host(host_id):
-    name = request.form.get("name", "").strip()
-    title = request.form.get("title", "").strip()
-    host = request.form.get("host", "").strip()
-    group_id = request.form.get("group_id")
-    probe = request.form.get("probe", "FPing").strip()
-    enabled = 1 if request.form.get("enabled") else 0
-
-    if not name or not VALID_NAME.match(name):
-        flash("Invalid name.", "error")
-        return redirect(url_for("index"))
-
-    try:
-        update_host(host_id, name, host, int(group_id), title or name, probe, enabled)
-        flash(f"Host '{name}' updated", "success")
-        deploy_and_reload()
-    except Exception as e:
-        flash(f"Error: {e}", "error")
-    return redirect(url_for("index"))
-
-
-@app.route("/host/<int:host_id>/delete", methods=["POST"])
-@login_required
-def remove_host(host_id):
-    host = get_host(host_id)
-    if host:
-        delete_host(host_id)
-        flash(f"Host '{host['name']}' deleted", "success")
-        deploy_and_reload()
-    return redirect(url_for("index"))
-
-
-# --- Config generation & reload ---
-
-@app.route("/config/preview")
-@login_required
-def preview_config():
-    config = generate_config()
-    return render_template("preview.html", config=config)
-
-
-@app.route("/config/deploy", methods=["POST"])
-@login_required
-def deploy_config():
-    try:
-        filepath = write_config()
-        flash(f"Config written to {filepath}", "success")
-
-        if request.form.get("reload"):
-            success, msg = reload_smokeping()
-            if success:
-                flash(msg, "success")
-            else:
-                flash(msg, "error")
-    except Exception as e:
-        flash(f"Deploy failed: {e}", "error")
-    return redirect(url_for("index"))
-
-
-# --- SmokePing CGI proxy ---
+# --- Graph rendering ---
 
 @app.route("/smokeping-cgi")
 @login_required
@@ -236,32 +88,152 @@ def smokeping_cgi_proxy():
     })
 
 
-# --- Graph routes ---
+# --- Manage (target administration) ---
 
-@app.route("/graphs")
+@app.route("/manage")
 @login_required
-def graphs():
+def manage():
     tree = get_tree()
-    return render_template("graphs.html", tree=tree)
+    groups = get_groups()
+    return render_template("manage.html", tree=tree, groups=groups)
 
 
-@app.route("/graphs/<path:target_path>")
+@app.route("/group/add", methods=["POST"])
 @login_required
-def host_detail(target_path):
-    return render_template("host_detail.html", target_path=target_path)
+def add_group():
+    name = request.form.get("name", "").strip()
+    title = request.form.get("title", "").strip()
+    parent_id = request.form.get("parent_id") or None
+
+    if not name or not VALID_NAME.match(name):
+        flash("Invalid name. Use letters, numbers, underscore. Must start with a letter.", "error")
+        return redirect(url_for("manage"))
+
+    if parent_id:
+        parent_id = int(parent_id)
+
+    try:
+        create_group(name, title or name, parent_id)
+        flash(f"Group '{name}' created", "success")
+        deploy_and_reload()
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("manage"))
 
 
-# --- Update routes ---
-
-@app.route("/update")
+@app.route("/group/<int:group_id>/edit", methods=["POST"])
 @login_required
-def update_page():
+def edit_group(group_id):
+    name = request.form.get("name", "").strip()
+    title = request.form.get("title", "").strip()
+    parent_id = request.form.get("parent_id") or None
+
+    if not name or not VALID_NAME.match(name):
+        flash("Invalid name.", "error")
+        return redirect(url_for("manage"))
+
+    if parent_id:
+        parent_id = int(parent_id)
+        if parent_id == group_id:
+            flash("A group cannot be its own parent.", "error")
+            return redirect(url_for("manage"))
+
+    try:
+        update_group(group_id, name, title or name, parent_id)
+        flash(f"Group '{name}' updated", "success")
+        deploy_and_reload()
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("manage"))
+
+
+@app.route("/group/<int:group_id>/delete", methods=["POST"])
+@login_required
+def remove_group(group_id):
+    group = get_group(group_id)
+    if group:
+        delete_group(group_id)
+        flash(f"Group '{group['name']}' deleted (including all hosts and subgroups)", "success")
+        deploy_and_reload()
+    return redirect(url_for("manage"))
+
+
+@app.route("/host/add", methods=["POST"])
+@login_required
+def add_host():
+    name = request.form.get("name", "").strip()
+    title = request.form.get("title", "").strip()
+    host = request.form.get("host", "").strip()
+    group_id = request.form.get("group_id")
+    probe = request.form.get("probe", "FPing").strip()
+
+    if not name or not VALID_NAME.match(name):
+        flash("Invalid name. Use letters, numbers, underscore. Must start with a letter.", "error")
+        return redirect(url_for("manage"))
+
+    if not host:
+        flash("Host (IP or hostname) is required.", "error")
+        return redirect(url_for("manage"))
+
+    if not group_id:
+        flash("Please select a group.", "error")
+        return redirect(url_for("manage"))
+
+    try:
+        create_host(name, host, int(group_id), title or name, probe)
+        flash(f"Host '{name}' ({host}) added", "success")
+        deploy_and_reload()
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("manage"))
+
+
+@app.route("/host/<int:host_id>/edit", methods=["POST"])
+@login_required
+def edit_host(host_id):
+    name = request.form.get("name", "").strip()
+    title = request.form.get("title", "").strip()
+    host = request.form.get("host", "").strip()
+    group_id = request.form.get("group_id")
+    probe = request.form.get("probe", "FPing").strip()
+    enabled = 1 if request.form.get("enabled") else 0
+
+    if not name or not VALID_NAME.match(name):
+        flash("Invalid name.", "error")
+        return redirect(url_for("manage"))
+
+    try:
+        update_host(host_id, name, host, int(group_id), title or name, probe, enabled)
+        flash(f"Host '{name}' updated", "success")
+        deploy_and_reload()
+    except Exception as e:
+        flash(f"Error: {e}", "error")
+    return redirect(url_for("manage"))
+
+
+@app.route("/host/<int:host_id>/delete", methods=["POST"])
+@login_required
+def remove_host(host_id):
+    host = get_host(host_id)
+    if host:
+        delete_host(host_id)
+        flash(f"Host '{host['name']}' deleted", "success")
+        deploy_and_reload()
+    return redirect(url_for("manage"))
+
+
+# --- Settings ---
+
+@app.route("/settings")
+@login_required
+def settings():
     current = get_current_version()
     has_updates, info = check_for_updates()
-    return render_template("update.html", current=current, has_updates=has_updates, info=info)
+    config = generate_config()
+    return render_template("settings.html", current=current, has_updates=has_updates, info=info, config=config)
 
 
-@app.route("/update/apply", methods=["POST"])
+@app.route("/settings/update", methods=["POST"])
 @login_required
 def do_update():
     success, message = apply_update()
@@ -270,7 +242,25 @@ def do_update():
         restart_service()
     else:
         flash(f"Update failed: {message}", "error")
-    return redirect(url_for("update_page"))
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/deploy", methods=["POST"])
+@login_required
+def deploy_config():
+    try:
+        filepath = write_config()
+        flash(f"Config written to {filepath}", "success")
+
+        if request.form.get("reload"):
+            success, msg = reload_smokeping()
+            if success:
+                flash(msg, "success")
+            else:
+                flash(msg, "error")
+    except Exception as e:
+        flash(f"Deploy failed: {e}", "error")
+    return redirect(url_for("settings"))
 
 
 if __name__ == "__main__":
