@@ -80,7 +80,9 @@ def host_detail(target_path):
 def smokeping_cgi_proxy():
     target = request.args.get("target", "")
     display_range = request.args.get("displayrange", "3h")
-    content_type, body = render_graph(target, display_range)
+    start = request.args.get("start")
+    end = request.args.get("end")
+    content_type, body = render_graph(target, display_range, start=start, end=end)
     return Response(body, content_type=content_type, headers={
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         "Pragma": "no-cache",
