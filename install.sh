@@ -53,6 +53,9 @@ SPM_ADMIN_PASSWORD=admin
 SPM_CONFIG_DIR=${SMOKEPING_CONFIG_DIR}
 SPM_INCLUDE_FILE=managed-targets
 SPM_PID_FILE=/var/run/smokeping/smokeping.pid
+SPM_HOST=0.0.0.0
+SPM_PORT=5000
+SPM_DEBUG=false
 SPM_CGI_URL=/smokeping/smokeping.cgi
 SPM_DATABASE=${INSTALL_DIR}/smokeping-manager.db
 EOF

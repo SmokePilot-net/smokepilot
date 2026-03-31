@@ -7,7 +7,7 @@ from database import (
 )
 from generator import generate_config, write_config, reload_smokeping
 from updater import get_current_version, check_for_updates, apply_update, restart_service
-from config import SECRET_KEY, ADMIN_USER, ADMIN_PASSWORD, SMOKEPING_CGI_URL
+from config import SECRET_KEY, ADMIN_USER, ADMIN_PASSWORD, SMOKEPING_CGI_URL, HOST, PORT, DEBUG
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -242,4 +242,4 @@ def do_update():
 
 if __name__ == "__main__":
     init_db()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host=HOST, port=PORT, debug=DEBUG)

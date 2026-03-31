@@ -11,6 +11,11 @@ SMOKEPING_INCLUDE_FILE = os.environ.get("SPM_INCLUDE_FILE", "managed-targets")
 SMOKEPING_PID_FILE = os.environ.get("SPM_PID_FILE", "/var/run/smokeping/smokeping.pid")
 SMOKEPING_CGI_URL = os.environ.get("SPM_CGI_URL", "/smokeping/smokeping.cgi")
 
+# Server
+HOST = os.environ.get("SPM_HOST", "0.0.0.0")
+PORT = int(os.environ.get("SPM_PORT", "5000"))
+DEBUG = os.environ.get("SPM_DEBUG", "false").lower() in ("true", "1", "yes")
+
 # Auth
 SECRET_KEY = os.environ.get("SPM_SECRET_KEY", "change-me-in-production")
 ADMIN_USER = os.environ.get("SPM_ADMIN_USER", "admin")
