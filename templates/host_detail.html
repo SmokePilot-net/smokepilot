@@ -18,7 +18,7 @@
                 {% elif period == '400d' %}Last 400 Days
                 {% endif %}
             </h3>
-            <img src="{{ smokeping_cgi_url }}?target={{ target_path }}&displaymode=a&displayrange={{ period }}"
+            <img src="{{ smokeping_cgi_url }}?target={{ target_path }}&displayrange={{ period }}"
                  alt="{{ target_path }} - {{ period }}"
                  class="graph-img"
                  onerror="this.parentElement.innerHTML+='<div class=\'graph-placeholder\'>Graph not available for this period</div>'; this.style.display='none';">

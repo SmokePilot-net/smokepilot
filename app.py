@@ -7,7 +7,7 @@ from database import (
 )
 from generator import generate_config, write_config, reload_smokeping
 from updater import get_current_version, check_for_updates, apply_update, restart_service
-from smokeping_proxy import call_cgi
+from graph_renderer import render_graph
 from config import SECRET_KEY, ADMIN_USER, ADMIN_PASSWORD, HOST, PORT, DEBUG
 
 app = Flask(__name__)
@@ -226,14 +226,13 @@ def deploy_config():
 @app.route("/smokeping-cgi")
 @login_required
 def smokeping_cgi_proxy():
-    query_string = request.query_string.decode("utf-8", errors="replace")
-    content_type, body = call_cgi(query_string)
+    target = request.args.get("target", "")
+    display_range = request.args.get("displayrange", "3h")
+    content_type, body = render_graph(target, display_range)
     return Response(body, content_type=content_type, headers={
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         "Pragma": "no-cache",
         "Expires": "0",
-        "CDN-Cache-Control": "no-store",
-        "Cloudflare-CDN-Cache-Control": "no-store",
     })
 
 

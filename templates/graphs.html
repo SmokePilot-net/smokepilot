@@ -14,7 +14,7 @@
                 <span class="host-addr">{{ h.host }}</span>
             </div>
             <a href="{{ url_for('host_detail', target_path=h.target_path) }}">
-                <img src="{{ smokeping_cgi_url }}?target={{ h.target_path }}&displaymode=a"
+                <img src="{{ smokeping_cgi_url }}?target={{ h.target_path }}&displayrange=3h"
                      alt="{{ h.title }}"
                      class="graph-img"
                      onerror="this.parentElement.innerHTML='<div class=\'graph-placeholder\'>Graph not yet available — deploy config and wait for SmokePing to collect data</div>'">
