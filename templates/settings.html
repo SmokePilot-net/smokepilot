@@ -86,6 +86,30 @@
     </div>
 </div>
 
+<!-- Graph Style -->
+<div class="card">
+    <h2>Graph Style</h2>
+    <form method="post" action="{{ url_for('set_style') }}" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        {% set current_style = session.get('graph_style', 'classic') %}
+        <label style="cursor: pointer; padding: 8px 16px; border-radius: 4px; border: 2px solid {{ '#3498db' if current_style == 'classic' else '#0f3460' }}; background: {{ '#0f3460' if current_style == 'classic' else 'transparent' }};">
+            <input type="radio" name="style" value="classic" {{ 'checked' if current_style == 'classic' }} style="display:none;">
+            <span style="font-size: 13px;">Classic</span>
+            <div style="font-size: 11px; color: #888;">White graphs, tight smoke</div>
+        </label>
+        <label style="cursor: pointer; padding: 8px 16px; border-radius: 4px; border: 2px solid {{ '#3498db' if current_style == 'dark' else '#0f3460' }}; background: {{ '#0f3460' if current_style == 'dark' else 'transparent' }};">
+            <input type="radio" name="style" value="dark" {{ 'checked' if current_style == 'dark' }} style="display:none;">
+            <span style="font-size: 13px;">Dark</span>
+            <div style="font-size: 11px; color: #888;">Dark graphs, filled smoke</div>
+        </label>
+        <label style="cursor: pointer; padding: 8px 16px; border-radius: 4px; border: 2px solid {{ '#3498db' if current_style == 'classic_dark' else '#0f3460' }}; background: {{ '#0f3460' if current_style == 'classic_dark' else 'transparent' }};">
+            <input type="radio" name="style" value="classic_dark" {{ 'checked' if current_style == 'classic_dark' }} style="display:none;">
+            <span style="font-size: 13px;">Classic Dark</span>
+            <div style="font-size: 11px; color: #888;">Dark graphs, tight smoke</div>
+        </label>
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+    </form>
+</div>
+
 <!-- Import existing targets -->
 <div class="card">
     <h2>Import Existing Targets</h2>

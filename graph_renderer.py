@@ -13,34 +13,51 @@ RANGE_PRESETS = {
     "400d": 34560000,
 }
 
-# SmokePing's loss color scheme: maps loss bucket to (line_color, smoke_color)
-# Loss is stored as fraction (0.0 = no loss, 1.0 = 100% loss)
-# With 20 pings: 0/20=green, 1/20=blue, 2-3/20=blue, 4-10/20=magenta, 11+/20=red
-LOSS_COLORS = [
-    (0, "#00ff00", "#00ff0040"),       # 0 loss - green
-    (1, "#0000ff", "#0000ff40"),       # 1/20 loss - blue
-    (2, "#0000cc", "#0000cc40"),       # 2/20
-    (3, "#0000aa", "#0000aa40"),       # 3/20
-    (4, "#ff00ff", "#ff00ff40"),       # 4/20 - magenta
-    (10, "#ff0088", "#ff008840"),      # 10/20
-    (19, "#ff0000", "#ff000040"),      # 19/20 - red
-]
+# Graph style definitions
+STYLES = {
+    "classic": {
+        "back": "#ffffff",
+        "canvas": "#ffffff",
+        "grid": "#e0e0e0",
+        "mgrid": "#c0c0c0",
+        "font": "#333333",
+        "arrow": "#333333",
+        "axis": "#cccccc",
+        "frame": "#cccccc",
+        "median": "#00aa00",
+        "smoke_base": "009900",
+        "smoke_type": "tight",
+    },
+    "dark": {
+        "back": "#1a1a2e",
+        "canvas": "#16213e",
+        "grid": "#0f346066",
+        "mgrid": "#0f346099",
+        "font": "#e0e0e0",
+        "arrow": "#e0e0e0",
+        "axis": "#0f3460",
+        "frame": "#0f3460",
+        "median": "#00ee00",
+        "smoke_base": "00cc00",
+        "smoke_type": "filled",
+    },
+    "classic_dark": {
+        "back": "#1a1a2e",
+        "canvas": "#16213e",
+        "grid": "#0f346066",
+        "mgrid": "#0f346099",
+        "font": "#e0e0e0",
+        "arrow": "#e0e0e0",
+        "axis": "#0f3460",
+        "frame": "#0f3460",
+        "median": "#00ee00",
+        "smoke_base": "00cc00",
+        "smoke_type": "tight",
+    },
+}
 
-# Smoke percentile colors - graduated opacity for the cloud effect
-# Outermost (ping1, ping20) = lightest, innermost (ping10, ping11) = darkest
-SMOKE_PAIRS = [
-    # (low_ping, high_ping, color) - symmetrical pairs from outside in
-    ("ping1", "ping20", "#aaffaa18"),
-    ("ping2", "ping19", "#88ee8820"),
-    ("ping3", "ping18", "#66dd6628"),
-    ("ping4", "ping17", "#44cc4430"),
-    ("ping5", "ping16", "#22bb2238"),
-    ("ping6", "ping15", "#11aa1140"),
-    ("ping7", "ping14", "#00990048"),
-    ("ping8", "ping13", "#00880050"),
-    ("ping9", "ping12", "#007700580"),
-    ("ping10", "ping11", "#00660060"),
-]
+# Default style
+DEFAULT_STYLE = os.environ.get("SPM_GRAPH_STYLE", "classic")
 
 
 def find_rrd(target_path):
@@ -53,11 +70,15 @@ def find_rrd(target_path):
 
 
 def render_graph(target_path, display_range="3h", width=800, height=250,
-                 start=None, end=None, dark_mode=True):
-    """Render a SmokePing-style graph with smoke effect using rrdtool."""
+                 start=None, end=None, style=None):
+    """Render a SmokePing-style graph using rrdtool."""
     rrd_path = find_rrd(target_path)
     if not rrd_path:
         return _error_image(f"No data found for {target_path}")
+
+    if style is None:
+        style = DEFAULT_STYLE
+    colors = STYLES.get(style, STYLES["classic"])
 
     # Time range
     if start and end:
@@ -69,34 +90,6 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
         time_end = "now"
 
     label = target_path.split(".")[-1]
-
-    # Color scheme based on mode
-    if dark_mode:
-        colors = {
-            "back": "#1a1a2e",
-            "canvas": "#16213e",
-            "grid": "#0f346066",
-            "mgrid": "#0f346099",
-            "font": "#e0e0e0",
-            "arrow": "#e0e0e0",
-            "axis": "#0f3460",
-            "frame": "#0f3460",
-            "median": "#00ee00",
-            "smoke_base": "00cc00",
-        }
-    else:
-        colors = {
-            "back": "#ffffff",
-            "canvas": "#ffffff",
-            "grid": "#e0e0e0",
-            "mgrid": "#c0c0c0",
-            "font": "#333333",
-            "arrow": "#333333",
-            "axis": "#cccccc",
-            "frame": "#cccccc",
-            "median": "#00aa00",
-            "smoke_base": "009900",
-        }
 
     cmd = [
         "rrdtool", "graph", "-",
@@ -128,41 +121,17 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
     cmd.append(f"DEF:median={rrd_path}:median:AVERAGE")
     cmd.append(f"DEF:loss={rrd_path}:loss:AVERAGE")
 
-    # Build the smoke effect using overlapping areas
-    # Draw from highest percentile (lightest) to lowest (darkest).
-    # Each successive AREA overwrites the center, creating the layered
-    # smoke look where the core (near median) is darkest.
     sb = colors["smoke_base"]
 
-    # Outermost percentiles (lightest) drawn first, then overwritten by inner ones
-    # Higher opacities for dark mode since subtle greens vanish on dark canvas
-    if dark_mode:
-        smoke_layers = [
-            ("ping20", "40"), ("ping19", "48"), ("ping18", "50"), ("ping17", "58"),
-            ("ping16", "60"), ("ping15", "68"), ("ping14", "70"), ("ping13", "78"),
-            ("ping12", "80"), ("ping11", "88"),
-            ("ping10", "88"), ("ping9", "80"), ("ping8", "78"), ("ping7", "70"),
-            ("ping6", "68"), ("ping5", "60"), ("ping4", "58"), ("ping3", "50"),
-            ("ping2", "48"), ("ping1", "40"),
-        ]
+    if colors["smoke_type"] == "tight":
+        _add_tight_smoke(cmd, sb, colors)
     else:
-        smoke_layers = [
-            ("ping20", "18"), ("ping19", "20"), ("ping18", "28"), ("ping17", "30"),
-            ("ping16", "38"), ("ping15", "40"), ("ping14", "48"), ("ping13", "50"),
-            ("ping12", "58"), ("ping11", "60"),
-            ("ping10", "60"), ("ping9", "58"), ("ping8", "50"), ("ping7", "48"),
-            ("ping6", "40"), ("ping5", "38"), ("ping4", "30"), ("ping3", "28"),
-            ("ping2", "20"), ("ping1", "18"),
-        ]
+        _add_filled_smoke(cmd, sb, colors)
 
-    for ds, opacity in smoke_layers:
-        cmd.append(f"AREA:{ds}#{sb}{opacity}:")
-
-    # Median line on top - the sharp line through the smoke
+    # Median line on top
     cmd.append(f"LINE1:median{colors['median']}:median rtt")
 
-    # Loss color overlay using CDEFs
-    # When loss > 0, draw the median line in the appropriate loss color
+    # Loss color overlay
     cmd.append("CDEF:loss1=loss,0,GT,loss,0.1,LE,*,median,UNKN,IF")
     cmd.append("CDEF:loss2=loss,0.1,GT,loss,0.2,LE,*,median,UNKN,IF")
     cmd.append("CDEF:loss3=loss,0.2,GT,loss,0.5,LE,*,median,UNKN,IF")
@@ -181,7 +150,7 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
     cmd.append("GPRINT:median:MIN:  min\\: %6.2lf %ss\\n")
     cmd.append("GPRINT:loss:LAST:  packet loss\\: %5.1lf %%\\n")
 
-    # Loss color legend (matching SmokePing's style)
+    # Loss color legend
     pings = _get_pings(rrd_path)
     cmd.append("COMMENT:  loss color\\:")
     cmd.append(f"AREA:ping1#{sb}80:  0/{pings}")
@@ -211,8 +180,58 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
         return _error_image("Graph rendering timed out")
 
 
+def _add_tight_smoke(cmd, sb, colors):
+    """SmokePing classic style: smoke wraps tightly around the median.
+
+    Uses CDEF+STACK to only draw the area between each successive percentile,
+    creating a narrow cloud that shows jitter distribution around the median.
+    """
+    is_dark = colors["back"] != "#ffffff"
+
+    # Base: draw ping1 (fastest) as invisible area to set the baseline
+    cmd.append("AREA:ping1#00000000:")
+
+    # Stack the differences between successive percentiles
+    # Opacity peaks at the median (ping10-11) and fades toward the edges
+    if is_dark:
+        opacities = [
+            "30", "38", "40", "48", "50",   # ping2-6
+            "60", "70", "80", "90", "a0",   # ping7-11 (dense core)
+            "90", "80", "70", "60", "50",   # ping12-16
+            "48", "40", "38", "30",          # ping17-20
+        ]
+    else:
+        opacities = [
+            "10", "15", "1a", "20", "28",   # ping2-6
+            "30", "40", "50", "60", "70",   # ping7-11 (dense core)
+            "60", "50", "40", "30", "28",   # ping12-16
+            "20", "1a", "15", "10",          # ping17-20
+        ]
+
+    for i in range(2, 21):
+        opacity = opacities[i - 2]
+        # Difference between this percentile and the previous, clamped to 0
+        cmd.append(f"CDEF:smoke{i}=ping{i},ping{i - 1},-,0,MAX")
+        cmd.append(f"AREA:smoke{i}#{sb}{opacity}::STACK")
+
+
+def _add_filled_smoke(cmd, sb, colors):
+    """Filled style: overlapping areas from baseline, denser at center."""
+    smoke_layers = [
+        ("ping20", "40"), ("ping19", "48"), ("ping18", "50"), ("ping17", "58"),
+        ("ping16", "60"), ("ping15", "68"), ("ping14", "70"), ("ping13", "78"),
+        ("ping12", "80"), ("ping11", "88"),
+        ("ping10", "88"), ("ping9", "80"), ("ping8", "78"), ("ping7", "70"),
+        ("ping6", "68"), ("ping5", "60"), ("ping4", "58"), ("ping3", "50"),
+        ("ping2", "48"), ("ping1", "40"),
+    ]
+
+    for ds, opacity in smoke_layers:
+        cmd.append(f"AREA:{ds}#{sb}{opacity}:")
+
+
 def _get_pings(rrd_path):
-    """Get the number of pings from the RRD (count of pingN data sources)."""
+    """Get the number of pings from the RRD."""
     try:
         result = subprocess.run(
             ["rrdtool", "info", rrd_path],
