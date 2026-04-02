@@ -4,7 +4,7 @@ Web-based monitoring manager for SmokePing. Add, edit and remove targets via a w
 
 ## Features
 
-- **Group/host tree** — organize targets in nested groups (e.g. Clients > Pepperstone > web01)
+- **Group/host tree** — organize targets in nested groups (e.g. Clients > Cities > web01)
 - **Smoke graphs** — SmokePing-style graphs with jitter visualization (classic, dark, and classic dark modes)
 - **Click-drag zoom** — select a time range on any graph to zoom in
 - **Multi-user RBAC** — admin, operator, viewer roles with wildcard group permissions
