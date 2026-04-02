@@ -11,7 +11,7 @@ def require_edition(*editions):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
             if EDITION not in editions:
-                abort(403, description="This feature requires SmokePing Manager Pro")
+                abort(403, description="This feature requires SmokePilot Pro")
             return f(*args, **kwargs)
         return wrapper
     return decorator

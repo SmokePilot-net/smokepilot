@@ -9,7 +9,7 @@ def generate_config():
     tree = get_tree()
     lines = [
         "# ==========================================",
-        "# Managed by smokeping-manager — do not edit",
+        "# Managed by SmokePilot — do not edit",
         "# ==========================================",
         "",
     ]
@@ -59,7 +59,7 @@ def generate_slave_config(slave_id):
     lines = [
         "# ==========================================",
         f"# Config for slave: {slave['display_name'] or slave['name']}",
-        "# Managed by smokeping-manager — do not edit",
+        "# Managed by SmokePilot — do not edit",
         "# ==========================================",
         "",
     ]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SmokePing Manager Agent — runs on slave probe servers.
+"""SmokePilot Agent — runs on slave probe servers.
 
 Polls the master for config, writes it locally, and reloads SmokePing.
 Zero pip dependencies — uses only Python stdlib.
@@ -28,7 +28,7 @@ import urllib.error
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SmokePing Manager Slave Agent")
+    parser = argparse.ArgumentParser(description="SmokePilot Slave Agent")
     parser.add_argument("--master", default=os.environ.get("SPM_MASTER_URL", ""),
                         help="Master server URL")
     parser.add_argument("--key", default=os.environ.get("SPM_SLAVE_KEY", ""),
@@ -48,7 +48,7 @@ def main():
     master = args.master.rstrip("/")
     headers = {"Authorization": f"Bearer {args.key}", "Content-Type": "application/json"}
 
-    print("SmokePing Manager Agent")
+    print("SmokePilot Agent")
     print(f"  Master: {master}")
     print(f"  Config: {args.config_path}")
     print(f"  Poll:   {args.interval}s")

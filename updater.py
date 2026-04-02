@@ -106,7 +106,7 @@ def apply_update():
 
 
 def restart_service():
-    """Restart the smokeping-manager service after a short delay.
+    """Restart the smokepilot service after a short delay.
 
     Tries systemd first, falls back to re-executing the process.
     The delay gives the HTTP response time to reach the browser.
@@ -117,7 +117,7 @@ def restart_service():
 
         # Try systemd restart
         result = subprocess.run(
-            ["systemctl", "restart", "smokeping-manager"],
+            ["systemctl", "restart", "smokepilot"],
             capture_output=True, text=True, timeout=10
         )
         if result.returncode == 0:

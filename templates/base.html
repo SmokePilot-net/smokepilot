@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SmokePing Manager{% endblock %}</title>
+    <title>{% block title %}SmokePilot{% endblock %}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; }
@@ -56,7 +56,7 @@
 </head>
 <body>
     <div class="navbar">
-        <h1><a href="/" style="color: inherit; text-decoration: none;">SmokePing Manager</a></h1>
+        <h1><a href="/" style="color: inherit; text-decoration: none;">SmokePilot</a></h1>
         <div>
             {% if session.get('user_id') or session.get('logged_in') %}
             <a href="{{ url_for('dashboard') }}">Dashboard</a>

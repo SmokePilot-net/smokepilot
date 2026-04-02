@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# SmokePing Manager Agent installer
+# SmokePilot Agent installer
 # Installs the agent on a slave server to poll the master for config.
 #
 # Usage: sudo bash install.sh --master https://smokeping.example.com --key spm_abc123...
@@ -29,7 +29,7 @@ fi
 
 INSTALL_DIR="/opt/smokeping-agent"
 
-echo "=== SmokePing Manager Agent Installer ==="
+echo "=== SmokePilot Agent Installer ==="
 
 # Check SmokePing is installed
 if ! command -v smokeping >/dev/null 2>&1; then
@@ -57,7 +57,7 @@ echo "[3/3] Installing service..."
 if command -v systemctl >/dev/null 2>&1; then
     cat > /etc/systemd/system/smokeping-agent.service <<EOF
 [Unit]
-Description=SmokePing Manager Agent
+Description=SmokePilot Agent
 After=network.target smokeping.service
 
 [Service]

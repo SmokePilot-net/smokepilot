@@ -3,7 +3,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Database
-DATABASE = os.environ.get("SPM_DATABASE", os.path.join(BASE_DIR, "smokeping-manager.db"))
+DATABASE = os.environ.get("SPM_DATABASE", os.path.join(BASE_DIR, "smokepilot.db"))
 
 # SmokePing integration
 SMOKEPING_CONFIG_DIR = os.environ.get("SPM_CONFIG_DIR", "/etc/smokeping/config.d")
