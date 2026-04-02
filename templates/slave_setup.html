@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Slave Setup - SmokePilot{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>Slave Created: {{ slave.display_name or slave.name }}</h2>
+    <p style="color: #95d5b2; margin-bottom: 16px;">
+        Your slave probe has been created. Follow the steps below to set it up.
+    </p>
+
+    <!-- Step 1: Install -->
+    <h3 style="font-size: 14px; color: #a0c4e8; margin-bottom: 8px;">Step 1: Run this on the slave server</h3>
+    <p style="font-size: 13px; color: #888; margin-bottom: 8px;">
+        SSH into <code>{{ slave.hostname }}</code> and run:
+    </p>
+    {% set install_cmd = "curl -sL '" + public_url + "/slaves/install/" + (slave.id|string) + "?key=" + api_key + "' | sudo bash" %}
+    <div style="background: #1a1a2e; border-radius: 4px; padding: 12px 16px; font-family: monospace; font-size: 13px; color: #a0c4e8; position: relative; word-break: break-all; margin-bottom: 20px;">
+        {{ install_cmd }}
+        <button onclick="navigator.clipboard.writeText('{{ install_cmd }}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);"
+                class="btn btn-primary btn-sm" style="position: absolute; right: 8px; top: 8px;">Copy</button>
+    </div>
+
+    <p style="font-size: 13px; color: #888; margin-bottom: 4px;">
+        This will install SmokePing (if needed), the SmokePilot agent, configure it with your API key, and start the service automatically.
+    </p>
+
+    <!-- Step 2: Assign hosts -->
+    <h3 style="font-size: 14px; color: #a0c4e8; margin-top: 20px; margin-bottom: 8px;">Step 2: Assign hosts to monitor</h3>
+    <p style="font-size: 13px; color: #888; margin-bottom: 8px;">
+        Go to the <a href="{{ url_for('slaves_page') }}" style="color: #3498db;">Slaves page</a> and select which hosts this slave should monitor.
+    </p>
+
+    <!-- API Key (shown once) -->
+    <div style="margin-top: 24px; padding: 12px; background: #3d1f28; border: 1px solid #6b2c3a; border-radius: 4px;">
+        <strong style="color: #f5a3a3;">API Key (shown once — save it if needed):</strong>
+        <div style="font-family: monospace; font-size: 13px; color: #e0e0e0; margin-top: 4px; word-break: break-all;">
+            {{ api_key }}
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 16px;">
+    <a href="{{ url_for('slaves_page') }}" class="btn btn-primary">Go to Slaves</a>
+</div>
+
+{% endblock %}
