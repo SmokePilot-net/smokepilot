@@ -135,7 +135,7 @@ def get_tree():
     group_by_id = {g["id"]: dict(g) for g in groups}
 
     def get_group_path(group_id):
-        """Build the dotted path for a group, e.g. 'Clients.Pepperstone'."""
+        """Build the dotted path for a group, e.g. 'Clients.Acme'."""
         parts = []
         gid = group_id
         while gid is not None:

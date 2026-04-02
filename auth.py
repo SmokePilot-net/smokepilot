@@ -111,8 +111,8 @@ def user_can_access_group(user, group_name, group_path=None):
 
     Args:
         user: user dict with 'role' and 'id'
-        group_name: the group's name (e.g., 'Pepperstone')
-        group_path: full dotted path (e.g., 'Clients.Pepperstone')
+        group_name: the group's name (e.g., 'Acme')
+        group_path: full dotted path (e.g., 'Clients.Acme')
     """
     if user["role"] == "admin":
         return True
