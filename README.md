@@ -32,7 +32,7 @@ Then:
 
 ## How It Works
 
-SmokePilot does **not** modify your existing SmokePing config. It manages a separate `managed-targets` file that SmokePing loads via `@include`. Your existing targets are untouched.
+SmokePilot manages a separate `managed-targets` file that SmokePing loads via `@include`. You can import your existing targets from SmokePing's config, and from then on manage everything through the web UI.
 
 ## License
 
