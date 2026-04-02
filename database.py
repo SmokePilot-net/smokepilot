@@ -10,35 +10,10 @@ def get_db():
 
 
 def init_db():
-    db = get_db()
-    db.executescript("""
-        CREATE TABLE IF NOT EXISTS groups (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            title TEXT,
-            parent_id INTEGER,
-            sort_order INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (parent_id) REFERENCES groups(id) ON DELETE CASCADE,
-            UNIQUE(name, parent_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS hosts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            title TEXT,
-            host TEXT NOT NULL,
-            group_id INTEGER NOT NULL,
-            probe TEXT DEFAULT 'FPing',
-            sort_order INTEGER DEFAULT 0,
-            enabled INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
-            UNIQUE(name, group_id)
-        );
-    """)
-    db.commit()
-    db.close()
+    """Initialize database by running all pending migrations."""
+    from migrations import run_migrations
+    run_migrations()
+    _seed_admin_user()
 
 
 # --- Group CRUD ---
@@ -194,3 +169,197 @@ def get_tree():
         return tree
 
     return build_subtree(None)
+
+
+# --- User CRUD ---
+
+def get_users():
+    db = get_db()
+    users = db.execute("SELECT * FROM users ORDER BY username").fetchall()
+    db.close()
+    return users
+
+
+def get_user(user_id):
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    db.close()
+    return dict(user) if user else None
+
+
+def get_user_by_username(username):
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    db.close()
+    return dict(user) if user else None
+
+
+def get_user_by_token(token_hash):
+    db = get_db()
+    row = db.execute("""
+        SELECT u.*, t.scopes as token_scopes, t.id as token_id
+        FROM api_tokens t JOIN users u ON t.user_id = u.id
+        WHERE t.token_hash = ? AND (t.expires_at IS NULL OR t.expires_at > datetime('now'))
+    """, (token_hash,)).fetchone()
+    if row:
+        db.execute("UPDATE api_tokens SET last_used_at = datetime('now') WHERE id = ?", (row["token_id"],))
+        db.commit()
+    db.close()
+    return dict(row) if row else None
+
+
+def create_user(username, password_hash, email=None, role="viewer"):
+    db = get_db()
+    db.execute(
+        "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
+        (username, email, password_hash, role)
+    )
+    db.commit()
+    user_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+    db.close()
+    return user_id
+
+
+def update_user(user_id, username=None, email=None, role=None, password_hash=None, is_active=None):
+    db = get_db()
+    fields = []
+    values = []
+    if username is not None:
+        fields.append("username = ?")
+        values.append(username)
+    if email is not None:
+        fields.append("email = ?")
+        values.append(email)
+    if role is not None:
+        fields.append("role = ?")
+        values.append(role)
+    if password_hash is not None:
+        fields.append("password_hash = ?")
+        values.append(password_hash)
+    if is_active is not None:
+        fields.append("is_active = ?")
+        values.append(is_active)
+    if fields:
+        fields.append("updated_at = datetime('now')")
+        values.append(user_id)
+        db.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", values)
+        db.commit()
+    db.close()
+
+
+def delete_user(user_id):
+    db = get_db()
+    db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    db.commit()
+    db.close()
+
+
+# --- User Permissions ---
+
+def get_user_permissions(user_id):
+    db = get_db()
+    perms = db.execute(
+        "SELECT * FROM user_permissions WHERE user_id = ? ORDER BY group_pattern",
+        (user_id,)
+    ).fetchall()
+    db.close()
+    return perms
+
+
+def set_user_permissions(user_id, patterns):
+    """Replace all permissions for a user. patterns is a list of (group_pattern, permission) tuples."""
+    db = get_db()
+    db.execute("DELETE FROM user_permissions WHERE user_id = ?", (user_id,))
+    for pattern, perm in patterns:
+        db.execute(
+            "INSERT INTO user_permissions (user_id, group_pattern, permission) VALUES (?, ?, ?)",
+            (user_id, pattern, perm)
+        )
+    db.commit()
+    db.close()
+
+
+# --- API Tokens ---
+
+def create_api_token(user_id, name, token_hash, token_prefix, scopes="*", expires_at=None):
+    db = get_db()
+    db.execute(
+        "INSERT INTO api_tokens (user_id, name, token_hash, token_prefix, scopes, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, name, token_hash, token_prefix, scopes, expires_at)
+    )
+    db.commit()
+    db.close()
+
+
+def get_api_tokens(user_id):
+    db = get_db()
+    tokens = db.execute(
+        "SELECT id, name, token_prefix, scopes, expires_at, last_used_at, created_at FROM api_tokens WHERE user_id = ?",
+        (user_id,)
+    ).fetchall()
+    db.close()
+    return tokens
+
+
+def delete_api_token(token_id, user_id):
+    db = get_db()
+    db.execute("DELETE FROM api_tokens WHERE id = ? AND user_id = ?", (token_id, user_id))
+    db.commit()
+    db.close()
+
+
+# --- Audit Log ---
+
+def log_audit(user_id, username, action, entity_type, entity_id=None, entity_name=None, details=None, ip_address=None):
+    db = get_db()
+    db.execute(
+        "INSERT INTO audit_log (user_id, username, action, entity_type, entity_id, entity_name, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (user_id, username, action, entity_type, entity_id, entity_name, details, ip_address)
+    )
+    db.commit()
+    db.close()
+
+
+def get_audit_log(limit=100, entity_type=None, user_id=None):
+    db = get_db()
+    query = "SELECT * FROM audit_log"
+    conditions = []
+    values = []
+    if entity_type:
+        conditions.append("entity_type = ?")
+        values.append(entity_type)
+    if user_id:
+        conditions.append("user_id = ?")
+        values.append(user_id)
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+    query += " ORDER BY created_at DESC LIMIT ?"
+    values.append(limit)
+    rows = db.execute(query, values).fetchall()
+    db.close()
+    return rows
+
+
+# --- Seed admin user ---
+
+def _seed_admin_user():
+    """Create initial admin user from env vars if no users exist."""
+    from config import ADMIN_USER, ADMIN_PASSWORD
+    from auth import hash_password
+
+    db = get_db()
+    try:
+        count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    except Exception:
+        db.close()
+        return
+
+    if count == 0 and ADMIN_USER and ADMIN_PASSWORD:
+        pw_hash = hash_password(ADMIN_PASSWORD)
+        db.execute(
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')",
+            (ADMIN_USER, pw_hash)
+        )
+        db.commit()
+        print(f"  Created initial admin user: {ADMIN_USER}")
+    db.close()

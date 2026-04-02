@@ -58,10 +58,15 @@
     <div class="navbar">
         <h1><a href="/" style="color: inherit; text-decoration: none;">SmokePing Manager</a></h1>
         <div>
-            {% if session.get('logged_in') %}
+            {% if session.get('user_id') or session.get('logged_in') %}
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            {% if current_user and current_user.role in ['admin', 'operator'] %}
             <a href="{{ url_for('manage') }}">Manage</a>
+            {% endif %}
+            {% if current_user and current_user.role == 'admin' %}
             <a href="{{ url_for('settings') }}">Settings</a>
+            {% endif %}
+            <span style="color: #6c8ebf; margin-left: 8px;">{{ current_user.username if current_user else '' }}</span>
             <a href="{{ url_for('logout') }}">Logout</a>
             {% endif %}
         </div>

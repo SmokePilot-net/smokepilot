@@ -153,4 +153,99 @@
     {% endif %}
 </div>
 
+<!-- User Management -->
+<div class="card">
+    <h2>Users</h2>
+    <table>
+        <thead>
+            <tr><th>Username</th><th>Email</th><th>Role</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.email or '—' }}</td>
+                <td>{{ u.role }}</td>
+                <td>
+                    {% if current_user and u.id != current_user.id %}
+                    <form method="post" action="{{ url_for('remove_user', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('Delete user {{ u.username }}?')">
+                        <button class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                    {% else %}
+                    <span style="font-size: 12px; color: #888;">you</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 20px; font-size: 14px; color: #a0c4e8;">Add User</h3>
+    <form method="post" action="{{ url_for('add_user') }}" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: end;">
+        <div class="field" style="flex: 1; min-width: 120px;">
+            <label>Username</label>
+            <input type="text" name="username" required>
+        </div>
+        <div class="field" style="flex: 1; min-width: 120px;">
+            <label>Password</label>
+            <input type="password" name="password" required>
+        </div>
+        <div class="field" style="flex: 1; min-width: 120px;">
+            <label>Email (optional)</label>
+            <input type="text" name="email">
+        </div>
+        <div class="field" style="min-width: 100px;">
+            <label>Role</label>
+            <select name="role">
+                <option value="viewer">Viewer</option>
+                <option value="operator">Operator</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <div class="field" style="flex: 1; min-width: 150px;">
+            <label>Group permissions (comma-separated)</label>
+            <input type="text" name="permissions" placeholder="e.g. Clients_*, Servers">
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 36px;">Add User</button>
+    </form>
+</div>
+
+<!-- API Tokens -->
+<div class="card">
+    <h2>API Tokens</h2>
+    <form method="post" action="{{ url_for('create_token') }}" style="display: flex; gap: 8px; align-items: end;">
+        <div class="field" style="flex: 1;">
+            <label>Token name</label>
+            <input type="text" name="name" placeholder="e.g. CI pipeline" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 36px;">Create Token</button>
+    </form>
+</div>
+
+<!-- Audit Log -->
+<div class="card">
+    <h2>Audit Log</h2>
+    <div style="max-height: 400px; overflow-y: auto;">
+        <table>
+            <thead>
+                <tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr>
+            </thead>
+            <tbody>
+                {% for entry in audit %}
+                <tr>
+                    <td style="white-space: nowrap; font-size: 12px;">{{ entry.created_at }}</td>
+                    <td>{{ entry.username }}</td>
+                    <td>{{ entry.action }}</td>
+                    <td>{{ entry.entity_type }}{% if entry.entity_name %}: {{ entry.entity_name }}{% endif %}</td>
+                    <td style="font-size: 12px; color: #888; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ entry.details or '' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not audit %}
+                <tr><td colspan="5" style="color: #888;">No activity logged yet.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% endblock %}
