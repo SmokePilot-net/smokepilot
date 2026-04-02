@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Slaves - SmokePing Manager{% endblock %}
+{% block content %}
+
+<!-- Add Slave -->
+<div class="card">
+    <h2>Add Slave Probe</h2>
+    <form method="post" action="{{ url_for('add_slave') }}" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: end;">
+        <div class="field" style="flex: 1; min-width: 120px;">
+            <label>Name (no spaces)</label>
+            <input type="text" name="name" placeholder="e.g. london" required pattern="[A-Za-z][A-Za-z0-9_]*">
+        </div>
+        <div class="field" style="flex: 1; min-width: 150px;">
+            <label>Display Name</label>
+            <input type="text" name="display_name" placeholder="e.g. London, UK">
+        </div>
+        <div class="field" style="flex: 1; min-width: 150px;">
+            <label>Hostname / IP</label>
+            <input type="text" name="hostname" placeholder="e.g. slave1.example.com" required>
+        </div>
+        <div class="field" style="flex: 1; min-width: 100px;">
+            <label>Location</label>
+            <input type="text" name="location" placeholder="e.g. GB-LDN">
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 36px;">Add Slave</button>
+    </form>
+</div>
+
+<!-- Slave List -->
+{% if slaves %}
+{% for slave in slaves %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div>
+            <h2 style="border: none; padding: 0; margin: 0;">{{ slave.display_name or slave.name }}</h2>
+            <span style="font-size: 12px; color: #888;">
+                {{ slave.hostname }} | {{ slave.location or 'No location' }} |
+                Status: <span style="color: {{ '#95d5b2' if slave.status == 'active' else '#f5a3a3' if slave.status == 'unreachable' else '#888' }};">{{ slave.status }}</span>
+                {% if slave.last_seen_at %} | Last seen: {{ slave.last_seen_at }}{% endif %}
+            </span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <form method="post" action="{{ url_for('remove_slave', slave_id=slave.id) }}" onsubmit="return confirm('Delete slave {{ slave.name }}?')">
+                <button class="btn btn-danger btn-sm">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Install command -->
+    <div style="margin-bottom: 16px;">
+        <label style="font-size: 13px; font-weight: 600; color: #8899aa; display: block; margin-bottom: 4px;">Install on slave server:</label>
+        <div style="background: #1a1a2e; border-radius: 4px; padding: 10px 12px; font-family: monospace; font-size: 13px; color: #a0c4e8; position: relative; word-break: break-all;">
+            curl -s {{ public_url }}/slaves/install/{{ slave.id }} | sudo bash
+            <button onclick="navigator.clipboard.writeText('curl -s {{ public_url }}/slaves/install/{{ slave.id }} | sudo bash'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);"
+                    class="btn btn-primary btn-sm" style="position: absolute; right: 8px; top: 6px;">Copy</button>
+        </div>
+    </div>
+
+    <!-- Host assignments -->
+    <form method="post" action="{{ url_for('assign_slave_hosts', slave_id=slave.id) }}">
+        <label style="font-size: 13px; font-weight: 600; color: #8899aa; display: block; margin-bottom: 8px;">Assigned hosts:</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+            {% set assigned_ids = [] %}
+            {% for h in slave_hosts.get(slave.id, []) %}
+                {% if assigned_ids.append(h.id) %}{% endif %}
+            {% endfor %}
+            {% for host in hosts %}
+            <label style="font-size: 13px; cursor: pointer; padding: 4px 10px; border-radius: 4px; border: 1px solid #0f3460; background: {{ '#0f3460' if host.id in assigned_ids else 'transparent' }};">
+                <input type="checkbox" name="host_ids" value="{{ host.id }}" {{ 'checked' if host.id in assigned_ids }} style="margin-right: 4px;">
+                {{ host.name }} <span style="color: #6c8ebf; font-size: 11px;">({{ host.host }})</span>
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Save Assignments</button>
+    </form>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <p style="color: #888;">No slaves configured. Add one above to start monitoring from multiple locations.</p>
+</div>
+{% endif %}
+
+{% endblock %}

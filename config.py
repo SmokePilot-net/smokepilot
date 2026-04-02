@@ -16,6 +16,9 @@ HOST = os.environ.get("SPM_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SPM_PORT", "5000"))
 DEBUG = os.environ.get("SPM_DEBUG", "false").lower() in ("true", "1", "yes")
 
+# Public URL (for agent install scripts)
+PUBLIC_URL = os.environ.get("SPM_PUBLIC_URL", "")
+
 # Auth
 SECRET_KEY = os.environ.get("SPM_SECRET_KEY", "change-me-in-production")
 ADMIN_USER = os.environ.get("SPM_ADMIN_USER", "admin")

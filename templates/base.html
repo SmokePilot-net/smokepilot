@@ -64,6 +64,7 @@
             <a href="{{ url_for('manage') }}">Manage</a>
             {% endif %}
             {% if current_user and current_user.role == 'admin' %}
+            <a href="{{ url_for('slaves_page') }}">Slaves</a>
             <a href="{{ url_for('settings') }}">Settings</a>
             {% endif %}
             <span style="color: #6c8ebf; margin-left: 8px;">{{ current_user.username if current_user else '' }}</span>
