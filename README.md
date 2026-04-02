@@ -20,7 +20,7 @@ Web-based monitoring manager for SmokePing. Add, edit and remove targets via a w
 Requires an existing SmokePing installation (`apt install smokeping`).
 
 ```bash
-git clone https://github.com/smokepilot/smokepilot.git /opt/smokepilot
+git clone https://github.com/SmokePilot-net/smokepilot.git /opt/smokepilot
 cd /opt/smokepilot
 sudo bash install.sh
 ```

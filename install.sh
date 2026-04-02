@@ -36,7 +36,7 @@ if [ -d "$INSTALL_DIR" ]; then
     cd "$INSTALL_DIR"
     git pull origin master
 else
-    git clone https://github.com/smokepilot/smokepilot.git "$INSTALL_DIR"
+    git clone https://github.com/SmokePilot-net/smokepilot.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 
