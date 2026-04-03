@@ -50,8 +50,10 @@
     <div style="margin-bottom: 16px;">
         <label style="font-size: 13px; font-weight: 600; color: #8899aa; display: block; margin-bottom: 4px;">Install on slave server:</label>
         <div style="background: #1a1a2e; border-radius: 4px; padding: 10px 12px; font-family: monospace; font-size: 13px; color: #a0c4e8; position: relative; word-break: break-all;">
-            curl -s {{ public_url }}/slaves/install/{{ slave.id }} | sudo bash
-            <button onclick="navigator.clipboard.writeText('curl -s {{ public_url }}/slaves/install/{{ slave.id }} | sudo bash'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);"
+            {% set slave_cmd = "curl -s " + public_url + "/slaves/install/" + (slave.id|string) + " | sudo bash" %}
+            {{ slave_cmd }}
+            <button data-cmd="{{ slave_cmd|tojson|forceescape }}"
+                    onclick="navigator.clipboard.writeText(JSON.parse(this.dataset.cmd)); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);"
                     class="btn btn-primary btn-sm" style="position: absolute; right: 8px; top: 6px;">Copy</button>
         </div>
     </div>
