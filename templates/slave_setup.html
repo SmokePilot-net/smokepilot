@@ -16,7 +16,8 @@
     {% set install_cmd = "curl -sL '" + public_url + "/slaves/install/" + (slave.id|string) + "?key=" + api_key + "' | sudo bash" %}
     <div style="background: #1a1a2e; border-radius: 4px; padding: 12px 16px; font-family: monospace; font-size: 13px; color: #a0c4e8; position: relative; word-break: break-all; margin-bottom: 20px;">
         {{ install_cmd }}
-        <button onclick="navigator.clipboard.writeText('{{ install_cmd }}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);"
+        <button data-cmd="{{ install_cmd|tojson|forceescape }}"
+                onclick="navigator.clipboard.writeText(JSON.parse(this.dataset.cmd)); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 2000);"
                 class="btn btn-primary btn-sm" style="position: absolute; right: 8px; top: 8px;">Copy</button>
     </div>
 
