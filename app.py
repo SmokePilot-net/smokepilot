@@ -68,6 +68,7 @@ def inject_globals():
     return {
         "smokeping_cgi_url": url_for("smokeping_cgi_proxy"),
         "current_user": getattr(g, "current_user", None) or _session_user(),
+        "graph_style": session.get("graph_style", "light"),
     }
 
 
@@ -85,15 +86,13 @@ def dashboard():
     tree = get_tree()
     tree = filter_tree_for_user(tree, g.current_user)
     statuses = get_all_host_statuses(tree)
-    graph_style = session.get("graph_style", "light")
-    return render_template("dashboard.html", tree=tree, statuses=statuses, graph_style=graph_style)
+    return render_template("dashboard.html", tree=tree, statuses=statuses)
 
 
 @app.route("/host/<path:target_path>")
 @auth_required()
 def host_detail(target_path):
-    graph_style = session.get("graph_style", "light")
-    return render_template("host_detail.html", target_path=target_path, graph_style=graph_style)
+    return render_template("host_detail.html", target_path=target_path)
 
 
 # --- Graph rendering ---
