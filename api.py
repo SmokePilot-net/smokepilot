@@ -104,6 +104,22 @@ def get_host_detail(host_id):
     return jsonify({"data": dict(host)})
 
 
+def _build_target_path(host):
+    """Build SmokePing target path from host's group hierarchy. Returns path or None."""
+    group = get_group(host["group_id"])
+    if not group:
+        return None
+    parts = [group["name"]]
+    parent_id = group["parent_id"]
+    while parent_id:
+        parent = get_group(parent_id)
+        if not parent:
+            break
+        parts.insert(0, parent["name"])
+        parent_id = parent["parent_id"]
+    return ".".join(parts) + "." + host["name"]
+
+
 @api.route("/hosts/<int:host_id>/graph")
 def host_graph(host_id):
     """Render a graph for a specific host. Returns PNG image."""
@@ -112,16 +128,9 @@ def host_graph(host_id):
     if not host:
         return jsonify({"error": {"code": "not_found", "message": "Host not found"}}), 404
 
-    group = get_group(host["group_id"])
-    parts = [group["name"]] if group else []
-    parent_id = group["parent_id"] if group else None
-    while parent_id:
-        parent = get_group(parent_id)
-        if not parent:
-            break
-        parts.insert(0, parent["name"])
-        parent_id = parent["parent_id"]
-    target_path = ".".join(parts) + "." + host["name"]
+    target_path = _build_target_path(host)
+    if not target_path:
+        return jsonify({"error": {"code": "not_found", "message": "Host group not found"}}), 404
 
     display_range = request.args.get("range", "3h")
     style = request.args.get("style", "light")
@@ -138,16 +147,9 @@ def host_data(host_id):
     if not host:
         return jsonify({"error": {"code": "not_found", "message": "Host not found"}}), 404
 
-    group = get_group(host["group_id"])
-    parts = [group["name"]] if group else []
-    parent_id = group["parent_id"] if group else None
-    while parent_id:
-        parent = get_group(parent_id)
-        if not parent:
-            break
-        parts.insert(0, parent["name"])
-        parent_id = parent["parent_id"]
-    target_path = ".".join(parts) + "." + host["name"]
+    target_path = _build_target_path(host)
+    if not target_path:
+        return jsonify({"error": {"code": "not_found", "message": "Host group not found"}}), 404
 
     display_range = request.args.get("range", "3h")
     data = fetch_rrd_data(target_path, display_range)

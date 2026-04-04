@@ -4,6 +4,7 @@ from database import (
     init_db, get_tree, get_groups, get_group, create_group, update_group, delete_group,
     get_host, create_host, update_host, delete_host,
     get_users, get_user, get_user_by_username, create_user, delete_user,
+    set_user_permissions,
     create_api_token, delete_api_token, get_api_tokens,
     get_audit_log,
 )
@@ -356,7 +357,14 @@ def add_user():
 
     try:
         pw_hash = hash_password(password)
-        create_user(username, pw_hash, email, role)
+        user_id = create_user(username, pw_hash, email, role)
+
+        # Store group permissions for viewers (exact match only in Community)
+        patterns = request.form.get("permissions", "").strip()
+        if patterns and role == "viewer":
+            perm_list = [(p.strip(), "view") for p in patterns.split(",") if p.strip()]
+            set_user_permissions(user_id, perm_list)
+
         log_action("create", "user", entity_name=username, details={"role": role})
         flash(f"User '{username}' created with role '{role}'", "success")
     except Exception as e:

@@ -228,13 +228,38 @@ if (document.cookie.includes('hide_import=1')) {
 <!-- API Tokens -->
 <div class="card">
     <h2>API Tokens</h2>
-    <form method="post" action="{{ url_for('create_token') }}" style="display: flex; gap: 8px; align-items: end;">
+    {% if tokens %}
+    <table>
+        <thead>
+            <tr><th>Name</th><th>Prefix</th><th>Last Used</th><th>Created</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for t in tokens %}
+            <tr>
+                <td>{{ t.name }}</td>
+                <td><code>{{ t.token_prefix }}...</code></td>
+                <td>{{ t.last_used_at or 'never' }}</td>
+                <td>{{ t.created_at }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('remove_token', token_id=t.id) }}" style="display:inline;" onsubmit="return confirm('Revoke this token?')">
+                        <button class="btn btn-danger btn-sm">Revoke</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    <p style="font-size: 12px; color: #888; margin: 8px 0;">Community: 1 token per user. <a href="https://smokepilot.net" style="color: #3498db;">Upgrade to Pro</a> for unlimited.</p>
+    {% if not tokens or tokens|length < 1 %}
+    <form method="post" action="{{ url_for('create_token') }}" style="display: flex; gap: 8px; align-items: end; margin-top: 8px;">
         <div class="field" style="flex: 1;">
             <label>Token name</label>
             <input type="text" name="name" placeholder="e.g. CI pipeline" required>
         </div>
         <button type="submit" class="btn btn-primary" style="height: 36px;">Create Token</button>
     </form>
+    {% endif %}
 </div>
 
 <!-- Audit Log -->
