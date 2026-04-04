@@ -2,8 +2,6 @@
 {% block title %}Dashboard - SmokePilot{% endblock %}
 {% block content %}
 
-{% set current_style = session.get('graph_style', 'light') %}
-
 <!-- Sticky alert banner for down hosts -->
 {% set down_count = statuses.values()|selectattr('status', 'equalto', 'down')|list|length %}
 {% set degraded_count = statuses.values()|selectattr('status', 'equalto', 'degraded')|list|length %}
@@ -40,18 +38,12 @@
                 <span class="status-badge badge-stale">STALE</span>
                 {% endif %}
             </div>
-            {% if current_style == 'compact' %}
-            <a href="{{ url_for('host_detail', target_path=h.target_path) }}">
-                <div class="svg-graph" data-target="{{ h.target_path }}" data-status="{{ host_status }}"></div>
-            </a>
-            {% else %}
             <a href="{{ url_for('host_detail', target_path=h.target_path) }}">
                 <img src="{{ smokeping_cgi_url }}?target={{ h.target_path }}&displayrange=3h"
                      alt="{{ h.title }}"
                      class="graph-img"
                      onerror="this.parentElement.innerHTML='<div class=\'graph-placeholder\'>Graph not yet available</div>'">
             </a>
-            {% endif %}
         </div>
         {% endfor %}
     </div>
@@ -80,10 +72,6 @@
     .graph-img { width: 100%; height: auto; border-radius: 4px; }
     .graph-placeholder { color: #888; font-size: 13px; padding: 40px 16px; text-align: center; background: #0f3460; border-radius: 4px; }
 
-    /* SVG compact graphs */
-    .svg-graph { width: 100%; height: 80px; border-radius: 4px; }
-    .svg-graph svg { width: 100%; height: 100%; }
-
     /* Status indicators */
     .status-down { animation: pulse-red 2s ease-in-out infinite; }
     .status-degraded { border-color: #f39c12; }
@@ -99,113 +87,6 @@
     .badge-degraded { background: #f39c12; color: #fff; }
     .badge-stale { background: #555; color: #ccc; }
 </style>
-
-{% if current_style == 'compact' %}
-<script>
-// SVG compact graph renderer
-document.querySelectorAll('.svg-graph').forEach(function(container) {
-    var target = container.dataset.target;
-    var hostStatus = container.dataset.status;
-
-    fetch('/graph-data/' + target + '?range=3h')
-        .then(function(r) { return r.json(); })
-        .then(function(points) {
-            if (!points || points.length < 2) {
-                container.innerHTML = '<div class="graph-placeholder" style="height:80px;line-height:80px;">No data</div>';
-                return;
-            }
-
-            var w = container.offsetWidth || 500;
-            var h = 80;
-            var pad = 2;
-
-            // Find data range
-            var medians = points.map(function(p) { return p.median; }).filter(function(v) { return v != null; });
-            var mins = points.map(function(p) { return p.min || p.median; }).filter(function(v) { return v != null; });
-            var maxs = points.map(function(p) { return p.max || p.median; }).filter(function(v) { return v != null; });
-
-            if (medians.length < 2) {
-                container.innerHTML = '<div class="graph-placeholder" style="height:80px;line-height:80px;">Insufficient data</div>';
-                return;
-            }
-
-            var allVals = mins.concat(maxs);
-            var yMin = Math.min.apply(null, allVals) * 0.9;
-            var yMax = Math.max.apply(null, allVals) * 1.1;
-            if (yMax - yMin < 1) { yMin -= 0.5; yMax += 0.5; }
-
-            function x(i) { return pad + (i / (points.length - 1)) * (w - 2 * pad); }
-            function y(v) { return h - pad - ((v - yMin) / (yMax - yMin)) * (h - 2 * pad); }
-
-            // Build smooth path using bezier curves
-            function smoothPath(values, accessor) {
-                var pts = [];
-                for (var i = 0; i < values.length; i++) {
-                    var v = accessor(values[i]);
-                    if (v != null) pts.push({ x: x(i), y: y(v) });
-                }
-                if (pts.length < 2) return '';
-
-                var d = 'M ' + pts[0].x + ' ' + pts[0].y;
-                for (var i = 1; i < pts.length; i++) {
-                    var prev = pts[i - 1];
-                    var curr = pts[i];
-                    var cpx = (prev.x + curr.x) / 2;
-                    d += ' C ' + cpx + ' ' + prev.y + ' ' + cpx + ' ' + curr.y + ' ' + curr.x + ' ' + curr.y;
-                }
-                return d;
-            }
-
-            // Build smoke area (between min and max)
-            function smokeArea(values) {
-                var upper = [], lower = [];
-                for (var i = 0; i < values.length; i++) {
-                    var mx = values[i].max || values[i].median;
-                    var mn = values[i].min || values[i].median;
-                    if (mx != null && mn != null) {
-                        upper.push({ x: x(i), y: y(mx) });
-                        lower.push({ x: x(i), y: y(mn) });
-                    }
-                }
-                if (upper.length < 2) return '';
-
-                // Upper path forward
-                var d = 'M ' + upper[0].x + ' ' + upper[0].y;
-                for (var i = 1; i < upper.length; i++) {
-                    var cpx = (upper[i-1].x + upper[i].x) / 2;
-                    d += ' C ' + cpx + ' ' + upper[i-1].y + ' ' + cpx + ' ' + upper[i].y + ' ' + upper[i].x + ' ' + upper[i].y;
-                }
-                // Lower path backward
-                for (var i = lower.length - 1; i >= 0; i--) {
-                    if (i === lower.length - 1) {
-                        d += ' L ' + lower[i].x + ' ' + lower[i].y;
-                    } else {
-                        var cpx = (lower[i+1].x + lower[i].x) / 2;
-                        d += ' C ' + cpx + ' ' + lower[i+1].y + ' ' + cpx + ' ' + lower[i].y + ' ' + lower[i].x + ' ' + lower[i].y;
-                    }
-                }
-                d += ' Z';
-                return d;
-            }
-
-            var smokeColor = hostStatus === 'down' ? 'rgba(231,76,60,0.3)' : 'rgba(0,200,0,0.15)';
-            var lineColor = hostStatus === 'down' ? '#e74c3c' : '#00cc00';
-            var smokePath = smokeArea(points);
-            var medianPath = smoothPath(points, function(p) { return p.median; });
-
-            var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">';
-            if (smokePath) svg += '<path d="' + smokePath + '" fill="' + smokeColor + '" />';
-            if (medianPath) svg += '<path d="' + medianPath + '" fill="none" stroke="' + lineColor + '" stroke-width="1.5" />';
-            svg += '</svg>';
-
-            container.innerHTML = svg;
-        })
-        .catch(function() {
-            container.innerHTML = '<div class="graph-placeholder" style="height:80px;line-height:80px;">Error loading data</div>';
-        });
-});
-</script>
-{% endif %}
 
 <script>
 // Auto-refresh every 5 minutes
