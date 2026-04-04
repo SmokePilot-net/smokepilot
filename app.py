@@ -85,13 +85,15 @@ def dashboard():
     tree = get_tree()
     tree = filter_tree_for_user(tree, g.current_user)
     statuses = get_all_host_statuses(tree)
-    return render_template("dashboard.html", tree=tree, statuses=statuses)
+    graph_style = session.get("graph_style", "light")
+    return render_template("dashboard.html", tree=tree, statuses=statuses, graph_style=graph_style)
 
 
 @app.route("/host/<path:target_path>")
 @auth_required()
 def host_detail(target_path):
-    return render_template("host_detail.html", target_path=target_path)
+    graph_style = session.get("graph_style", "light")
+    return render_template("host_detail.html", target_path=target_path, graph_style=graph_style)
 
 
 # --- Graph rendering ---
