@@ -143,7 +143,7 @@ def get_all_host_statuses(tree):
     return statuses
 
 
-def render_graph(target_path, display_range="3h", width=800, height=250,
+def render_graph(target_path, display_range="3h", width=600, height=250,
                  start=None, end=None, style=None):
     """Render a SmokePing-style graph using rrdtool, or pass through CGI for classic mode."""
     if style is None:
