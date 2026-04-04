@@ -42,20 +42,72 @@
                         Apply Update + Restart
                     </button>
                 </form>
-                <div id="restartNotice" style="display:none; margin-top: 16px; padding: 12px; background: #1b4332; border: 1px solid #2d6a4f; border-radius: 4px; color: #95d5b2;">
-                    Update applied. Service is restarting... This page will reload automatically.
+
+                <!-- Full-page upgrade overlay -->
+                <div id="upgradeOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#1a1a2e; z-index:9999; display:none; justify-content:center; align-items:center; flex-direction:column;">
+                    <div style="text-align:center; max-width:400px;">
+                        <h2 style="color:#e0e0e0; margin-bottom:16px;">Updating SmokePilot</h2>
+                        <div style="background:#16213e; border-radius:8px; padding:24px; border:1px solid #0f3460;">
+                            <p style="color:#95d5b2; font-size:16px; margin-bottom:16px;" id="upgradeStatus">Applying update...</p>
+                            <div style="width:100%; height:4px; background:#0f3460; border-radius:2px; overflow:hidden; margin-bottom:16px;">
+                                <div id="upgradeProgress" style="width:0%; height:100%; background:#3498db; border-radius:2px; transition:width 1s linear;"></div>
+                            </div>
+                            <p style="color:#888; font-size:13px;" id="upgradeDetail">Service is restarting. Please wait...</p>
+                        </div>
+                    </div>
                 </div>
+
                 <script>
                 function confirmUpdate() {
                     if (!confirm('Apply update and restart the service?')) return false;
+
                     setTimeout(function() {
-                        document.getElementById('restartNotice').style.display = 'block';
+                        var overlay = document.getElementById('upgradeOverlay');
+                        overlay.style.display = 'flex';
+
+                        var progress = document.getElementById('upgradeProgress');
+                        var status = document.getElementById('upgradeStatus');
+                        var detail = document.getElementById('upgradeDetail');
+                        var seconds = 0;
+                        var waitTime = 15;
+
+                        // Progress bar countdown
+                        var countdown = setInterval(function() {
+                            seconds++;
+                            var pct = Math.min((seconds / waitTime) * 100, 95);
+                            progress.style.width = pct + '%';
+
+                            if (seconds < 3) {
+                                status.textContent = 'Pulling latest code...';
+                            } else if (seconds < 8) {
+                                status.textContent = 'Restarting service...';
+                                detail.textContent = 'This usually takes 10-15 seconds.';
+                            } else {
+                                status.textContent = 'Almost ready...';
+                                detail.textContent = 'Waiting for service to come back online.';
+                            }
+                        }, 1000);
+
+                        // Start polling after 10 seconds
                         setTimeout(function pollReady() {
-                            fetch('{{ url_for("settings") }}')
-                                .then(function() { window.location.reload(); })
-                                .catch(function() { setTimeout(pollReady, 1000); });
-                        }, 3000);
-                    }, 100);
+                            fetch('{{ url_for("settings") }}', { redirect: 'manual' })
+                                .then(function(r) {
+                                    if (r.status < 500) {
+                                        clearInterval(countdown);
+                                        progress.style.width = '100%';
+                                        status.textContent = 'Update complete!';
+                                        detail.textContent = 'Redirecting...';
+                                        setTimeout(function() { window.location.reload(); }, 500);
+                                    } else {
+                                        setTimeout(pollReady, 2000);
+                                    }
+                                })
+                                .catch(function() {
+                                    setTimeout(pollReady, 2000);
+                                });
+                        }, 10000);
+                    }, 200);
+
                     return true;
                 }
                 </script>
