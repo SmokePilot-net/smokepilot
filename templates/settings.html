@@ -93,12 +93,13 @@
 <!-- Graph Style -->
 <div class="card">
     <h2>Graph Style</h2>
-    {% set current_style = session.get('graph_style', 'classic') %}
+    {% set current_style = session.get('graph_style', 'light') %}
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         {% for style_id, style_name, style_desc in [
-            ('classic', 'Classic', 'White graphs, tight smoke'),
+            ('light', 'Light', 'White graphs, tight smoke'),
             ('dark', 'Dark', 'Dark graphs, filled smoke'),
-            ('classic_dark', 'Classic Dark', 'Dark graphs, tight smoke')
+            ('classic_dark', 'Classic Dark', 'Dark graphs, tight smoke'),
+            ('smokeping_classic', 'SmokePing Classic', 'Original SmokePing CGI graphs')
         ] %}
         <form method="post" action="{{ url_for('set_style') }}" style="display: inline;">
             <input type="hidden" name="style" value="{{ style_id }}">
@@ -114,9 +115,20 @@
     </div>
 </div>
 
+<script>
+if (document.cookie.includes('hide_import=1')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        var el = document.getElementById('importSection');
+        if (el) el.style.display = 'none';
+    });
+}
+</script>
 <!-- Import existing targets -->
-<div class="card">
-    <h2>Import Existing Targets</h2>
+<div class="card" id="importSection">
+    <h2>Import Existing Targets
+        <button onclick="document.getElementById('importSection').style.display='none'; document.cookie='hide_import=1;path=/;max-age=31536000';"
+                style="float: right; background: none; border: none; color: #888; cursor: pointer; font-size: 16px;" title="Dismiss">x</button>
+    </h2>
     <p style="font-size: 13px; color: #888; margin-bottom: 12px;">
         Import targets from SmokePing's existing <code>Targets</code> config file into the manager database.
     </p>

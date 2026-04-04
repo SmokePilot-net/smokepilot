@@ -15,7 +15,7 @@ RANGE_PRESETS = {
 
 # Graph style definitions
 STYLES = {
-    "classic": {
+    "light": {
         "back": "#ffffff",
         "canvas": "#ffffff",
         "grid": "#e0e0e0",
@@ -57,7 +57,7 @@ STYLES = {
 }
 
 # Default style
-DEFAULT_STYLE = os.environ.get("SPM_GRAPH_STYLE", "classic")
+DEFAULT_STYLE = os.environ.get("SPM_GRAPH_STYLE", "light")
 
 
 def find_rrd(target_path):
@@ -71,14 +71,19 @@ def find_rrd(target_path):
 
 def render_graph(target_path, display_range="3h", width=800, height=250,
                  start=None, end=None, style=None):
-    """Render a SmokePing-style graph using rrdtool."""
+    """Render a SmokePing-style graph using rrdtool, or pass through CGI for classic mode."""
+    if style is None:
+        style = DEFAULT_STYLE
+
+    # SmokePing Classic: use the original CGI renderer
+    if style == "smokeping_classic":
+        return _render_via_cgi(target_path, display_range)
+
     rrd_path = find_rrd(target_path)
     if not rrd_path:
         return _error_image(f"No data found for {target_path}")
 
-    if style is None:
-        style = DEFAULT_STYLE
-    colors = STYLES.get(style, STYLES["classic"])
+    colors = STYLES.get(style, STYLES["light"])
 
     # Time range
     if start and end:
@@ -244,6 +249,15 @@ def _get_pings(rrd_path):
         return str(count) if count else "20"
     except Exception:
         return "20"
+
+
+def _render_via_cgi(target_path, display_range):
+    """Render using SmokePing's original CGI script."""
+    from smokeping_proxy import call_cgi
+    query = f"target={target_path}&displaymode=a"
+    if display_range:
+        query += f"&displayrange={display_range}"
+    return call_cgi(query)
 
 
 def _error_image(message):
