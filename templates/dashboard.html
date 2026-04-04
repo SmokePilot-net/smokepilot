@@ -41,7 +41,7 @@
             <a href="{{ url_for('host_detail', target_path=h.target_path) }}">
                 <img src="{{ smokeping_cgi_url }}?target={{ h.target_path }}&displayrange=3h"
                      alt="{{ h.title }}"
-                     class="graph-img"
+                     class="graph-img{{ ' graph-white-bg' if graph_style == 'smokeping_classic' else '' }}"
                      onerror="this.parentElement.innerHTML='<div class=\'graph-placeholder\'>Graph not yet available</div>'">
             </a>
         </div>
@@ -70,6 +70,7 @@
     .graph-header { margin-bottom: 8px; font-size: 14px; }
     .graph-header .host-addr { color: #6c8ebf; font-family: monospace; margin-left: 8px; font-size: 12px; }
     .graph-img { width: 100%; height: auto; border-radius: 4px; }
+    .graph-white-bg { background: #fff; }
     .graph-placeholder { color: #888; font-size: 13px; padding: 40px 16px; text-align: center; background: #0f3460; border-radius: 4px; }
 
     /* Status indicators */
