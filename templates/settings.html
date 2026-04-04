@@ -68,19 +68,23 @@
     <div class="col">
         <!-- Generated Config Preview -->
         <div class="card">
-            <h2>Generated SmokePing Config</h2>
-            <p style="font-size: 13px; color: #888; margin-bottom: 12px;">
-                Current <code>@include managed-targets</code> content.
-            </p>
-            <pre>{{ config }}</pre>
-            <div style="margin-top: 12px; display: flex; gap: 8px;">
-                <form method="post" action="{{ url_for('deploy_config') }}">
-                    <button type="submit" class="btn btn-primary btn-sm">Write Config</button>
-                </form>
-                <form method="post" action="{{ url_for('deploy_config') }}">
-                    <input type="hidden" name="reload" value="1">
-                    <button type="submit" class="btn btn-success btn-sm">Write + Reload</button>
-                </form>
+            <h2 style="cursor: pointer;" onclick="var el=document.getElementById('configPreview'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; this.querySelector('span').textContent = el.style.display === 'none' ? '+' : '-';">
+                Generated SmokePing Config <span style="float: right; color: #888;">+</span>
+            </h2>
+            <div id="configPreview" style="display: none;">
+                <p style="font-size: 13px; color: #888; margin-bottom: 12px;">
+                    Current <code>@include managed-targets</code> content.
+                </p>
+                <pre>{{ config }}</pre>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                    <form method="post" action="{{ url_for('deploy_config') }}">
+                        <button type="submit" class="btn btn-primary btn-sm">Write Config</button>
+                    </form>
+                    <form method="post" action="{{ url_for('deploy_config') }}">
+                        <input type="hidden" name="reload" value="1">
+                        <button type="submit" class="btn btn-success btn-sm">Write + Reload</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
