@@ -16,16 +16,16 @@ RANGE_PRESETS = {
 # Graph style definitions
 STYLES = {
     "light": {
-        "back": "#ffffff",
+        "back": "#f5f5f5",
         "canvas": "#ffffff",
-        "grid": "#e0e0e0",
-        "mgrid": "#c0c0c0",
+        "grid": "#d0d0d0",
+        "mgrid": "#a0a0a0",
         "font": "#333333",
         "arrow": "#333333",
-        "axis": "#cccccc",
-        "frame": "#cccccc",
-        "median": "#00aa00",
-        "smoke_base": "009900",
+        "axis": "#c0c0c0",
+        "frame": "#808080",
+        "median": "#00bb00",
+        "smoke_base": "888888",
         "smoke_type": "tight",
     },
     "dark": {
