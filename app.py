@@ -102,7 +102,10 @@ def smokeping_cgi_proxy():
     display_range = request.args.get("displayrange", "3h")
     start = request.args.get("start")
     end = request.args.get("end")
+    valid_styles = ("light", "dark", "classic_dark", "smokeping_classic")
     style = session.get("graph_style", "light")
+    if style not in valid_styles:
+        style = "light"
     content_type, body = render_graph(target, display_range, start=start, end=end, style=style)
     return Response(body, content_type=content_type, headers={
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
