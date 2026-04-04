@@ -13,7 +13,7 @@ from database import (
 )
 from generator import generate_config, write_config, reload_smokeping
 from updater import get_current_version, check_for_updates, apply_update, restart_service
-from graph_renderer import render_graph
+from graph_renderer import render_graph, get_all_host_statuses
 from importer import parse_targets_file, import_to_database
 from auth import (
     auth_required, hash_password, check_password, generate_api_token,
@@ -89,7 +89,8 @@ def _session_user():
 def dashboard():
     tree = get_tree()
     tree = filter_tree_for_user(tree, g.current_user)
-    return render_template("dashboard.html", tree=tree)
+    statuses = get_all_host_statuses(tree)
+    return render_template("dashboard.html", tree=tree, statuses=statuses)
 
 
 @app.route("/host/<path:target_path>")

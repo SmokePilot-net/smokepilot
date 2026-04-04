@@ -69,6 +69,80 @@ def find_rrd(target_path):
     return None
 
 
+def get_host_status(target_path):
+    """Check host status from latest RRD data.
+
+    Returns dict with:
+        status: 'up', 'down', 'degraded', 'stale', 'unknown'
+        loss: packet loss percentage (0.0 - 1.0)
+        median: median RTT in seconds, or None
+        last_update: timestamp of last RRD update
+    """
+    rrd_path = find_rrd(target_path)
+    if not rrd_path:
+        return {"status": "unknown", "loss": None, "median": None, "last_update": None}
+
+    try:
+        # Check RRD file freshness
+        mtime = os.path.getmtime(rrd_path)
+        age = time.time() - mtime
+
+        # Get latest data point
+        result = subprocess.run(
+            ["rrdtool", "lastupdate", rrd_path],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode != 0:
+            return {"status": "unknown", "loss": None, "median": None, "last_update": None}
+
+        # Parse: last line is "timestamp: val1 val2 ..."
+        lines = result.stdout.strip().split("\n")
+        if len(lines) < 2:
+            return {"status": "unknown", "loss": None, "median": None, "last_update": None}
+
+        data_line = lines[-1]
+        parts = data_line.split()
+        # Format: "timestamp: uptime loss median ping1 ..."
+        timestamp = int(parts[0].rstrip(":"))
+        loss_val = parts[2] if len(parts) > 2 else "U"
+        median_val = parts[3] if len(parts) > 3 else "U"
+
+        loss = float(loss_val) if loss_val != "U" else None
+        median = float(median_val) if median_val != "U" else None
+
+        # Determine status
+        if age > 900:  # 3x probe interval — SmokePing isn't writing
+            status = "stale"
+        elif loss is None:
+            status = "unknown"
+        elif loss >= 1.0:
+            status = "down"
+        elif loss > 0:
+            status = "degraded"
+        else:
+            status = "up"
+
+        return {"status": status, "loss": loss, "median": median, "last_update": timestamp}
+    except Exception:
+        return {"status": "unknown", "loss": None, "median": None, "last_update": None}
+
+
+def get_all_host_statuses(tree):
+    """Get status for all hosts in the tree. Returns dict of target_path -> status."""
+    statuses = {}
+
+    def walk(nodes):
+        for node in nodes:
+            for h in node.get("hosts", []):
+                path = h.get("target_path")
+                if path:
+                    statuses[path] = get_host_status(path)
+            walk(node.get("children", []))
+
+    walk(tree)
+    return statuses
+
+
 def render_graph(target_path, display_range="3h", width=800, height=250,
                  start=None, end=None, style=None):
     """Render a SmokePing-style graph using rrdtool, or pass through CGI for classic mode."""

@@ -8,10 +8,19 @@
     {% if node.hosts %}
     <div class="graph-grid">
         {% for h in node.hosts %}
-        <div class="graph-card">
+        {% set status = statuses.get(h.target_path, {}) %}
+        {% set host_status = status.get('status', 'unknown') %}
+        <div class="graph-card {{ 'status-down' if host_status == 'down' else 'status-degraded' if host_status == 'degraded' else 'status-stale' if host_status == 'stale' else '' }}">
             <div class="graph-header">
                 <strong>{{ h.title }}</strong>
                 <span class="host-addr">{{ h.host }}</span>
+                {% if host_status == 'down' %}
+                <span class="status-badge badge-down">DOWN</span>
+                {% elif host_status == 'degraded' %}
+                <span class="status-badge badge-degraded">LOSS</span>
+                {% elif host_status == 'stale' %}
+                <span class="status-badge badge-stale">STALE</span>
+                {% endif %}
             </div>
             <a href="{{ url_for('host_detail', target_path=h.target_path) }}">
                 <img src="{{ smokeping_cgi_url }}?target={{ h.target_path }}&displayrange=3h"
@@ -41,20 +50,38 @@
 
 <style>
     .graph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); gap: 16px; }
-    .graph-card { background: #1a1a2e; border-radius: 6px; padding: 12px; border: 1px solid #0f3460; }
+    .graph-card { background: #1a1a2e; border-radius: 6px; padding: 12px; border: 1px solid #0f3460; transition: border-color 0.3s; }
     .graph-header { margin-bottom: 8px; font-size: 14px; }
     .graph-header .host-addr { color: #6c8ebf; font-family: monospace; margin-left: 8px; font-size: 12px; }
     .graph-img { width: 100%; height: auto; border-radius: 4px; }
     .graph-placeholder { color: #888; font-size: 13px; padding: 40px 16px; text-align: center; background: #0f3460; border-radius: 4px; }
+
+    /* Status indicators */
+    .status-down { animation: pulse-red 2s ease-in-out infinite; }
+    .status-degraded { border-color: #f39c12; }
+    .status-stale { border-color: #888; opacity: 0.7; }
+
+    @keyframes pulse-red {
+        0%, 100% { border-color: #e74c3c; box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        50% { border-color: #ff0000; box-shadow: 0 0 12px 2px rgba(231, 76, 60, 0.4); }
+    }
+
+    .status-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+    .badge-down { background: #e74c3c; color: #fff; }
+    .badge-degraded { background: #f39c12; color: #fff; }
+    .badge-stale { background: #555; color: #ccc; }
 </style>
 
 <script>
-// Auto-refresh graphs every 5 minutes (matches SmokePing probe interval)
+// Auto-refresh graphs and statuses every 5 minutes
 setInterval(function() {
+    // Refresh graph images
     document.querySelectorAll('.graph-img').forEach(function(img) {
         var src = img.src.split('?')[0] + '?' + img.src.split('?')[1].replace(/&_=\d+/, '') + '&_=' + Date.now();
         img.src = src;
     });
+    // Reload page to update statuses
+    window.location.reload();
 }, 300000);
 </script>
 
