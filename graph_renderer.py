@@ -326,12 +326,30 @@ def _get_pings(rrd_path):
 
 
 def _render_via_cgi(target_path, display_range):
-    """Render using SmokePing's original CGI script."""
+    """Render using SmokePing's original CGI script.
+
+    SmokePing displaymode=a outputs SVG and requires start/end params.
+    """
     from smokeping_proxy import call_cgi
-    query = f"target={target_path}&displaymode=a"
-    if display_range:
-        query += f"&displayrange={display_range}"
-    return call_cgi(query)
+
+    # Map display range to start param
+    range_map = {
+        "3h": "-3h",
+        "30h": "-30h",
+        "10d": "-10d",
+        "400d": "-400d",
+    }
+    start = range_map.get(display_range, f"-{display_range}")
+
+    # SmokePing uses semicolons as param separators
+    query = f"displaymode=a;target={target_path};start={start};end=now"
+    content_type, body = call_cgi(query)
+
+    # SmokePing returns SVG — update content type
+    if body and body[:5] == b"<?xml" or (body and b"<svg" in body[:200]):
+        content_type = "image/svg+xml"
+
+    return content_type, body
 
 
 def fetch_rrd_data(target_path, display_range="3h"):

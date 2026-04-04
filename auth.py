@@ -1,7 +1,6 @@
 import functools
 import hashlib
 import secrets
-import fnmatch
 from flask import request, session, redirect, url_for, abort, g
 
 # Try bcrypt, fall back to hashlib-based hashing
@@ -126,21 +125,21 @@ def user_can_access_group(user, group_name, group_path=None):
     for perm in permissions:
         pattern = perm["group_pattern"]
 
-        # Match against group name
-        if fnmatch.fnmatch(group_name, pattern):
+        # Exact match against group name
+        if group_name == pattern:
             return True
 
-        # Match against full path if provided
-        if group_path and fnmatch.fnmatch(group_path, pattern):
+        # Exact match against full path
+        if group_path and group_path == pattern:
             return True
 
-        # Match against top-level component
+        # Match against top-level component of path
         if group_path:
             top_level = group_path.split(".")[0]
-            if fnmatch.fnmatch(top_level, pattern):
+            if top_level == pattern:
                 return True
 
-        # Wildcard matches everything
+        # "*" matches everything
         if pattern == "*":
             return True
 
