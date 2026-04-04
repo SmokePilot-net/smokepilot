@@ -151,7 +151,7 @@ def render_graph(target_path, display_range="3h", width=800, height=250,
 
     # SmokePing Classic: use the original CGI renderer
     if style == "smokeping_classic":
-        return _render_via_cgi(target_path, display_range)
+        return _render_via_cgi(target_path, display_range, start=start, end=end)
 
     rrd_path = find_rrd(target_path)
     if not rrd_path:
@@ -325,24 +325,30 @@ def _get_pings(rrd_path):
         return "20"
 
 
-def _render_via_cgi(target_path, display_range):
+def _render_via_cgi(target_path, display_range, start=None, end=None):
     """Render using SmokePing's original CGI script.
 
-    SmokePing displaymode=a outputs SVG and requires start/end params.
+    SmokePing displaymode=a requires start/end params.
     """
     from smokeping_proxy import call_cgi
 
-    # Map display range to start param
-    range_map = {
-        "3h": "-3h",
-        "30h": "-30h",
-        "10d": "-10d",
-        "400d": "-400d",
-    }
-    start = range_map.get(display_range, f"-{display_range}")
+    if start and end:
+        # Custom time range (from zoom)
+        cgi_start = str(start)
+        cgi_end = str(end)
+    else:
+        # Map display range to start param
+        range_map = {
+            "3h": "-3h",
+            "30h": "-30h",
+            "10d": "-10d",
+            "400d": "-400d",
+        }
+        cgi_start = range_map.get(display_range, f"-{display_range}")
+        cgi_end = "now"
 
     # SmokePing uses semicolons as param separators
-    query = f"displaymode=a;target={target_path};start={start};end=now"
+    query = f"displaymode=a;target={target_path};start={cgi_start};end={cgi_end}"
     content_type, body = call_cgi(query)
 
     # SmokePing returns SVG — update content type

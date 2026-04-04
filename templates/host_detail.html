@@ -17,7 +17,7 @@
     <!-- Zoomed graph (shown when user selects a range) -->
     <div id="zoomedGraph" style="display:none; margin-bottom: 20px;">
         <div class="graph-container" style="position: relative; display: inline-block;">
-            <img id="zoomedImg" class="graph-img zoomable" alt="Zoomed view">
+            <img id="zoomedImg" class="graph-img zoomable{{ ' graph-white-bg' if graph_style == 'smokeping_classic' else '' }}" alt="Zoomed view">
             <div class="zoom-overlay" id="zoomedOverlay"></div>
         </div>
     </div>
