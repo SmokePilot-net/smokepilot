@@ -13,7 +13,7 @@ from database import (
 )
 from generator import generate_config, write_config, reload_smokeping
 from updater import get_current_version, check_for_updates, apply_update, restart_service
-from graph_renderer import render_graph, get_all_host_statuses
+from graph_renderer import render_graph, get_all_host_statuses, fetch_rrd_data
 from importer import parse_targets_file, import_to_database
 from auth import (
     auth_required, hash_password, check_password, generate_api_token,
@@ -115,6 +115,16 @@ def smokeping_cgi_proxy():
         "Pragma": "no-cache",
         "Expires": "0",
     })
+
+
+@app.route("/graph-data/<path:target_path>")
+@auth_required()
+def graph_data(target_path):
+    """Return RRD data as JSON for SVG graph rendering."""
+    from flask import jsonify
+    display_range = request.args.get("range", "3h")
+    data = fetch_rrd_data(target_path, display_range)
+    return jsonify(data)
 
 
 # --- Manage (target administration) ---
@@ -485,7 +495,7 @@ def import_targets():
 @auth_required()
 def set_style():
     style = request.form.get("style", "classic")
-    if style in ("light", "dark", "classic_dark", "smokeping_classic"):
+    if style in ("light", "dark", "classic_dark", "smokeping_classic", "compact"):
         session["graph_style"] = style
         flash(f"Graph style set to {style.replace('_', ' ').title()}", "success")
     return redirect(url_for("settings"))
