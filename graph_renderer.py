@@ -334,6 +334,67 @@ def _render_via_cgi(target_path, display_range):
     return call_cgi(query)
 
 
+def fetch_rrd_data(target_path, display_range="3h"):
+    """Fetch RRD data as a list of data points for SVG rendering.
+
+    Returns list of {"time": epoch, "median": float, "loss": float, "min": float, "max": float}
+    """
+    rrd_path = find_rrd(target_path)
+    if not rrd_path:
+        return []
+
+    seconds = RANGE_PRESETS.get(display_range, 10800)
+
+    try:
+        result = subprocess.run(
+            ["rrdtool", "fetch", rrd_path, "AVERAGE", "--start", f"-{seconds}"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return []
+
+        lines = result.stdout.strip().split("\n")
+        if len(lines) < 2:
+            return []
+
+        # First line is header: "timestamp: uptime loss median ping1 ... ping20"
+        data = []
+        for line in lines[2:]:  # skip header + empty line
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+
+            ts = int(parts[0].rstrip(":"))
+            loss_str = parts[2]
+            median_str = parts[3]
+            # ping1 = fastest, ping20 = slowest
+            ping1_str = parts[4] if len(parts) > 4 else "nan"
+            ping20_str = parts[-1] if len(parts) > 4 else "nan"
+
+            try:
+                median = float(median_str) if "nan" not in median_str else None
+                loss = float(loss_str) if "nan" not in loss_str else None
+                p_min = float(ping1_str) if "nan" not in ping1_str else None
+                p_max = float(ping20_str) if "nan" not in ping20_str else None
+            except ValueError:
+                median = loss = p_min = p_max = None
+
+            if median is not None:
+                data.append({
+                    "time": ts,
+                    "median": round(median * 1000, 2),  # convert to ms
+                    "loss": round(loss * 100, 1) if loss is not None else 0,
+                    "min": round(p_min * 1000, 2) if p_min is not None else None,
+                    "max": round(p_max * 1000, 2) if p_max is not None else None,
+                })
+
+        return data
+    except Exception:
+        return []
+
+
 def _error_image(message):
     """Return error as plain text fallback."""
     return "text/plain", message.encode("utf-8")

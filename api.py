@@ -339,6 +339,30 @@ def host_graph(host_id):
     })
 
 
+@api.route("/hosts/<int:host_id>/data")
+def host_data(host_id):
+    """Return RRD time series data as JSON for SVG rendering."""
+    from graph_renderer import fetch_rrd_data
+    host = get_host(host_id)
+    if not host:
+        return jsonify({"error": {"code": "not_found", "message": "Host not found"}}), 404
+
+    group = get_group(host["group_id"])
+    parts = [group["name"]] if group else []
+    parent_id = group["parent_id"] if group else None
+    while parent_id:
+        parent = get_group(parent_id)
+        if not parent:
+            break
+        parts.insert(0, parent["name"])
+        parent_id = parent["parent_id"]
+    target_path = ".".join(parts) + "." + host["name"]
+
+    display_range = request.args.get("range", "3h")
+    data = fetch_rrd_data(target_path, display_range)
+    return jsonify({"data": data})
+
+
 # --- Users (admin only) ---
 
 @api.route("/users")

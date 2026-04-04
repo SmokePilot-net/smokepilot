@@ -99,7 +99,8 @@
             ('light', 'Light', 'White graphs, tight smoke'),
             ('dark', 'Dark', 'Dark graphs, filled smoke'),
             ('classic_dark', 'Classic Dark', 'Dark graphs, tight smoke'),
-            ('smokeping_classic', 'SmokePing Classic', 'Original SmokePing CGI graphs')
+            ('smokeping_classic', 'SmokePing Classic', 'Original SmokePing CGI graphs'),
+            ('compact', 'Compact', 'Smooth SVG lines, minimal')
         ] %}
         <form method="post" action="{{ url_for('set_style') }}" style="display: inline;">
             <input type="hidden" name="style" value="{{ style_id }}">
