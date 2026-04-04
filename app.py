@@ -290,8 +290,8 @@ def add_slave():
     try:
         slave_id = db_create_slave(name, display_name or name, hostname, key_hash, key_prefix, location)
         log_action("create", "slave", slave_id, name, {"location": location})
-        # Store key in session (one-time, not in URL to avoid log/history leaks)
-        session["slave_api_key"] = raw_key
+        # Store key in session keyed by slave_id (one-time use, popped on setup page)
+        session[f"slave_api_key_{slave_id}"] = raw_key
         return redirect(url_for("slave_setup", slave_id=slave_id))
     except Exception as e:
         flash(f"Error: {e}", "error")
@@ -305,7 +305,7 @@ def slave_setup(slave_id):
     if not slave:
         flash("Slave not found.", "error")
         return redirect(url_for("slaves_page"))
-    api_key = session.pop("slave_api_key", "")
+    api_key = session.pop(f"slave_api_key_{slave_id}", "")
     if not api_key:
         flash("API key is no longer available. Delete and recreate the slave to get a new key.", "error")
         return redirect(url_for("slaves_page"))
@@ -364,7 +364,6 @@ def serve_agent_installer(slave_id):
 
     # Sanitize values for safe shell embedding
     import shlex
-    safe_name = shlex.quote(slave['display_name'] or slave['name'])
     safe_key = shlex.quote(api_key)
     safe_url = shlex.quote(public_url)
 
@@ -388,7 +387,6 @@ fi
 
 INSTALL_DIR="/opt/smokepilot-agent"
 echo "=== Installing SmokePilot Agent ==="
-echo "  Slave: {safe_name}"
 echo "  Master: $MASTER_URL"
 
 # Check SmokePing
@@ -435,13 +433,17 @@ SVC_EOF
     systemctl daemon-reload
     systemctl enable smokeping-agent
     systemctl start smokeping-agent
+    echo ""
+    echo "=== Done ==="
+    echo "  SmokePilot agent is installed and running."
+    echo "  Status: sudo systemctl status smokeping-agent"
+    echo "  Logs:   sudo journalctl -u smokeping-agent -f"
+else
+    echo ""
+    echo "=== Done ==="
+    echo "  Agent installed but systemd not found."
+    echo "  Start manually: python3 /opt/smokepilot-agent/smokeping_agent.py"
 fi
-
-echo ""
-echo "=== Done ==="
-echo "  SmokePilot agent is installed and running."
-echo "  Status: sudo systemctl status smokeping-agent"
-echo "  Logs:   sudo journalctl -u smokeping-agent -f"
 """
     return Response(script, content_type="text/plain")
 
