@@ -26,12 +26,12 @@ if ! dpkg -l smokeping >/dev/null 2>&1; then
 fi
 
 # Install dependencies
-echo "[1/5] Installing dependencies..."
-apt-get install -y python3 python3-pip git >/dev/null 2>&1
+echo "[1/6] Installing dependencies..."
+apt-get install -y python3 python3-pip git fcgiwrap >/dev/null 2>&1
 pip3 install flask gunicorn >/dev/null 2>&1
 
 # Clone or update repo
-echo "[2/5] Installing SmokePilot..."
+echo "[2/6] Installing SmokePilot..."
 if [ -d "$INSTALL_DIR" ]; then
     cd "$INSTALL_DIR"
     git pull origin master
@@ -44,7 +44,7 @@ fi
 SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 
 # Create environment file
-echo "[3/5] Creating configuration..."
+echo "[3/6] Creating configuration..."
 if [ ! -f /etc/smokepilot.env ]; then
     cat > /etc/smokepilot.env <<EOF
 SPM_SECRET_KEY=${SECRET_KEY}
@@ -68,7 +68,7 @@ else
 fi
 
 # Install systemd service (if available)
-echo "[4/5] Setting up service..."
+echo "[4/6] Setting up service..."
 if command -v systemctl >/dev/null 2>&1; then
     cat > /etc/systemd/system/smokepilot.service <<EOF
 [Unit]
@@ -99,8 +99,48 @@ else
     HAS_SYSTEMD=0
 fi
 
+# Set up FastCGI for SmokePing Classic graph style
+echo "[5/6] Setting up FastCGI for SmokePing..."
+FCGI_SOCKET="/run/smokeping-fcgi.sock"
+if command -v fcgiwrap >/dev/null 2>&1 && command -v systemctl >/dev/null 2>&1; then
+    cat > /etc/systemd/system/smokeping-fcgi.service <<EOF
+[Unit]
+Description=SmokePing FastCGI wrapper
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/fcgiwrap -s unix:${FCGI_SOCKET}
+User=www-data
+Group=www-data
+RuntimeDirectory=smokeping-fcgi
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Ensure socket is accessible
+    cat > /etc/tmpfiles.d/smokeping-fcgi.conf <<EOF
+d /run/smokeping-fcgi 0755 www-data www-data -
+EOF
+
+    systemctl daemon-reload
+    systemctl enable smokeping-fcgi
+    systemctl start smokeping-fcgi
+    echo "  FastCGI service installed (${FCGI_SOCKET})"
+
+    # Add socket path to env file if not already there
+    if [ -f /etc/smokepilot.env ] && ! grep -q "SPM_FCGI_SOCKET" /etc/smokepilot.env; then
+        echo "SPM_FCGI_SOCKET=${FCGI_SOCKET}" >> /etc/smokepilot.env
+    fi
+else
+    echo "  fcgiwrap not available — SmokePing Classic will use subprocess fallback"
+fi
+
 # Add @include to SmokePing Targets if not already there
-echo "[5/5] Configuring SmokePing integration..."
+echo "[6/6] Configuring SmokePing integration..."
 TARGETS_FILE="${SMOKEPING_CONFIG_DIR}/Targets"
 INCLUDE_LINE="@include managed-targets"
 if [ -f "$TARGETS_FILE" ]; then
