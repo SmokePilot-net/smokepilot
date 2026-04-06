@@ -10,7 +10,7 @@ CGI_PATHS = [
 ]
 
 # FastCGI socket path (set by install script when fcgiwrap is configured)
-FCGI_SOCKET = os.environ.get("SPM_FCGI_SOCKET", "/run/smokeping-fcgi.sock")
+FCGI_SOCKET = os.environ.get("SPM_FCGI_SOCKET", "/run/smokeping-fcgi/fcgiwrap.sock")
 
 
 def find_cgi():
@@ -33,8 +33,10 @@ def call_cgi(query_string="", script_name="/smokeping/smokeping.cgi"):
     if os.path.exists(FCGI_SOCKET):
         try:
             return _call_fcgi(query_string, script_name)
-        except Exception:
-            pass  # Fall through to subprocess
+        except (OSError, socket.timeout, struct.error, ConnectionError) as e:
+            # FastCGI unavailable — fall through to subprocess
+            import sys
+            print(f"FastCGI failed ({e}), falling back to subprocess", file=sys.stderr)
 
     # Fallback: direct CGI subprocess (slow, cold start every time)
     return _call_subprocess(query_string, script_name)
@@ -114,12 +116,12 @@ def _fcgi_read_record(sock):
 
 
 def _recv_exact(sock, n):
-    """Receive exactly n bytes from socket."""
+    """Receive exactly n bytes from socket. Raises ConnectionError on short read."""
     data = b""
     while len(data) < n:
         chunk = sock.recv(n - len(data))
         if not chunk:
-            break
+            raise ConnectionError(f"FastCGI connection closed (got {len(data)} of {n} bytes)")
         data += chunk
     return data
 

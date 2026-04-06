@@ -101,7 +101,7 @@ fi
 
 # Set up FastCGI for SmokePing Classic graph style
 echo "[5/6] Setting up FastCGI for SmokePing..."
-FCGI_SOCKET="/run/smokeping-fcgi.sock"
+FCGI_SOCKET="/run/smokeping-fcgi/fcgiwrap.sock"
 if command -v fcgiwrap >/dev/null 2>&1 && command -v systemctl >/dev/null 2>&1; then
     cat > /etc/systemd/system/smokeping-fcgi.service <<EOF
 [Unit]
@@ -119,11 +119,6 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOF
-
-    # Ensure socket is accessible
-    cat > /etc/tmpfiles.d/smokeping-fcgi.conf <<EOF
-d /run/smokeping-fcgi 0755 www-data www-data -
 EOF
 
     systemctl daemon-reload
