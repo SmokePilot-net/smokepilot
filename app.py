@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from database import (
     init_db, get_tree, get_groups, get_group, create_group, update_group, delete_group,
     get_host, create_host, update_host, delete_host,
-    get_users, get_user, get_user_by_username, create_user, delete_user,
+    get_users, get_user, get_user_by_username, create_user, update_user, delete_user,
     set_user_permissions,
     create_api_token, delete_api_token, get_api_tokens,
     get_audit_log,
@@ -274,10 +274,9 @@ def settings():
     tree, parse_error = parse_targets_file()
     users = get_users()
     audit = get_audit_log(limit=50)
-    tokens = get_api_tokens(g.current_user["id"])
     return render_template("settings.html", current=current, has_updates=has_updates,
                            info=info, config=config, import_tree=tree, parse_error=parse_error,
-                           users=users, audit=audit, tokens=tokens)
+                           users=users, audit=audit)
 
 
 @app.route("/settings/import", methods=["POST"])
@@ -304,7 +303,7 @@ def set_style():
     if style in ("light", "dark", "classic_dark", "smokeping_classic"):
         session["graph_style"] = style
         flash(f"Graph style set to {style.replace('_', ' ').title()}", "success")
-    return redirect(url_for("settings"))
+    return redirect(url_for("account"))
 
 
 @app.route("/settings/update", methods=["POST"])
@@ -389,6 +388,48 @@ def remove_user(user_id):
     log_action("delete", "user", user_id, user["username"])
     flash(f"User '{user['username']}' deleted", "success")
     return redirect(url_for("settings"))
+
+
+# --- Password Change (available to all logged-in users) ---
+
+@app.route("/account", methods=["GET", "POST"])
+@auth_required()
+def account():
+    """Account page — available to all users. Password change + graph style."""
+    if request.method == "POST":
+        current = request.form.get("current_password", "")
+        new_pw = request.form.get("new_password", "")
+        confirm = request.form.get("confirm_password", "")
+
+        if not current or not new_pw:
+            flash("Current and new password are required.", "error")
+            return redirect(url_for("account"))
+
+        if len(new_pw) < 8:
+            flash("New password must be at least 8 characters.", "error")
+            return redirect(url_for("account"))
+
+        if new_pw != confirm:
+            flash("New passwords don't match.", "error")
+            return redirect(url_for("account"))
+
+        user = get_user(g.current_user["id"])
+        if not user:
+            flash("User not found.", "error")
+            return redirect(url_for("login"))
+
+        if not check_password(current, user["password_hash"]):
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("account"))
+
+        pw_hash = hash_password(new_pw)
+        update_user(g.current_user["id"], password_hash=pw_hash)
+        log_action("change_password", "user", g.current_user["id"], g.current_user["username"])
+        flash("Password changed successfully.", "success")
+        return redirect(url_for("account"))
+
+    tokens = get_api_tokens(g.current_user["id"])
+    return render_template("account.html", tokens=tokens)
 
 
 # --- API Token Management (1 token per user in Community) ---
