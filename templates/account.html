@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Account - SmokePilot{% endblock %}
+{% block content %}
+
+<!-- Change Password -->
+<div class="card">
+    <h2>Change Password</h2>
+    <form method="post" action="{{ url_for('account') }}" style="max-width: 400px;">
+        <div class="field">
+            <label>Current Password</label>
+            <input type="password" name="current_password" required autocomplete="current-password">
+        </div>
+        <div class="field">
+            <label>New Password (min 8 characters)</label>
+            <input type="password" name="new_password" required minlength="8" autocomplete="new-password">
+        </div>
+        <div class="field">
+            <label>Confirm New Password</label>
+            <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary">Change Password</button>
+    </form>
+</div>
+
+<!-- Graph Style -->
+<div class="card">
+    <h2>Graph Style</h2>
+    {% set current_style = session.get('graph_style', 'light') %}
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        {% for style_id, style_name, style_desc in [
+            ('light', 'Light', 'SmokePing-style, fast rendering'),
+            ('dark', 'Dark', 'Dark graphs, filled smoke'),
+            ('classic_dark', 'Classic Dark', 'Dark graphs, tight smoke'),
+            ('smokeping_classic', 'SmokePing Classic', 'Original SmokePing CGI graphs')
+        ] %}
+        <form method="post" action="{{ url_for('set_style') }}" style="display: inline;">
+            <input type="hidden" name="style" value="{{ style_id }}">
+            <button type="submit" style="cursor: pointer; padding: 8px 16px; border-radius: 4px;
+                border: 2px solid {{ '#3498db' if current_style == style_id else '#0f3460' }};
+                background: {{ '#0f3460' if current_style == style_id else 'transparent' }};
+                color: #e0e0e0; text-align: left;">
+                <span style="font-size: 13px; font-weight: 600;">{{ style_name }}</span>
+                <div style="font-size: 11px; color: #888;">{{ style_desc }}</div>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- API Token -->
+<div class="card">
+    <h2>API Token</h2>
+    {% if tokens %}
+    <table>
+        <thead>
+            <tr><th>Name</th><th>Prefix</th><th>Last Used</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+            {% for t in tokens %}
+            <tr>
+                <td>{{ t.name }}</td>
+                <td><code>{{ t.token_prefix }}...</code></td>
+                <td>{{ t.last_used_at or 'never' }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('remove_token', token_id=t.id) }}" style="display:inline;" onsubmit="return confirm('Revoke this token?')">
+                        <button class="btn btn-danger btn-sm">Revoke</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% if not tokens or tokens|length < 1 %}
+    <form method="post" action="{{ url_for('create_token') }}" style="display: flex; gap: 8px; align-items: end; margin-top: 8px;">
+        <div class="field" style="flex: 1;">
+            <label>Token name</label>
+            <input type="text" name="name" placeholder="e.g. CI pipeline" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 36px;">Create Token</button>
+    </form>
+    {% else %}
+    <p style="font-size: 12px; color: #888; margin-top: 8px;">Community: 1 token per user.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
